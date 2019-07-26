@@ -109,7 +109,7 @@ var (
 
 func init() {
 	downloadBufPool.New = func() interface{} {
-		return make([]byte, MIN_CHUNK_SIZE)
+		return make([]byte, helper.CONFIG.DownLoadBufPoolSize)
 	}
 }
 
@@ -514,6 +514,7 @@ func (yig *YigStorage) PutObject(bucketName string, objectName string, credentia
 	}
 
 	calculatedMd5 := hex.EncodeToString(md5Writer.Sum(nil))
+	helper.Logger.Println(20, "### calculatedMd5:", calculatedMd5, "userMd5:", metadata["md5Sum"])
 	if userMd5, ok := metadata["md5Sum"]; ok {
 		if userMd5 != "" && userMd5 != calculatedMd5 {
 			RecycleQueue <- maybeObjectToRecycle
