@@ -2,6 +2,7 @@ package main
 
 import (
 	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/iam"
+	"github.com/journeymidnight/yig/ims"
 	"github.com/journeymidnight/yig/log"
 	bus "github.com/journeymidnight/yig/messagebus"
 	_ "github.com/journeymidnight/yig/messagebus/kafka"
@@ -86,6 +88,20 @@ func main() {
 	allPluginMap := mods.InitialPlugins()
 
 	iam.InitializeIamClient(allPluginMap)
+	// try to initialize the image process plugin.
+	err = ims.CreateImgProcessClient(allPluginMap)
+	if err != nil {
+		helper.Logger.Error("failed to create image process client")
+		panic("failed to create image process client")
+	}
+
+	// Add pprof handler
+	if helper.CONFIG.EnablePProf {
+		go func() {
+			err := http.ListenAndServe("0.0.0.0:8730", nil)
+			helper.Logger.Error("Start ppof err:", err)
+		}()
+	}
 
 	startAdminServer(adminServerConfig)
 
