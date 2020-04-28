@@ -25,6 +25,7 @@ const EXPORTED_PLUGIN = "Exported"
 const (
 	IAM_PLUGIN = iota //IamClient interface
 	NUMS_PLUGIN
+	IMG_PROCESS_PLUGIN
 )
 
 func InitialPlugins() map[string]*YigPlugin {

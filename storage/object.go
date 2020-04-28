@@ -134,14 +134,7 @@ func generateTransWholeObjectFunc(cephCluster *CephStorage, object *meta.Object)
 
 func generateTransPartObjectFunc(cephCluster *CephStorage, object *meta.Object, part *meta.Part, offset, length int64) func(io.Writer) error {
 	getNormalObject := func(w io.Writer) error {
-		var oid string
-		/* the transfered part could be Part or Object */
-		if part != nil {
-			oid = part.ObjectId
-		} else {
-			oid = object.ObjectId
-		}
-		reader, err := cephCluster.getReader(object.Pool, oid, offset, length)
+		reader, err := generatePartObjectReader(cephCluster, object, part, offset, length)
 		if err != nil {
 			return nil
 		}
@@ -152,6 +145,21 @@ func generateTransPartObjectFunc(cephCluster *CephStorage, object *meta.Object, 
 		return err
 	}
 	return getNormalObject
+}
+
+func generatePartObjectReader(cephCluster *CephStorage, object *meta.Object, part *meta.Part, offset, length int64) (io.ReadCloser, error) {
+	var oid string
+	/* the transfered part could be Part or Object */
+	if part != nil {
+		oid = part.ObjectId
+	} else {
+		oid = object.ObjectId
+	}
+	reader, err := cephCluster.getReader(object.Pool, oid, offset, length)
+	if err != nil {
+		return nil, err
+	}
+	return reader, nil
 }
 
 func (yig *YigStorage) GetObject(ctx context.Context, object *meta.Object, startOffset int64,
@@ -274,6 +282,77 @@ func (yig *YigStorage) GetObject(ctx context.Context, object *meta.Object, start
 		}
 	}
 	return
+}
+
+func (yig *YigStorage) GetObjectStream(ctx context.Context, object *meta.Object, startOffset int64,
+	length int64, sseRequest datatype.SseRequest) (reader io.ReadCloser, err error) {
+	var encryptionKey []byte
+	if object.SseType == crypto.S3.String() {
+		if yig.KMS == nil {
+			helper.Logger.Error(ctx, fmt.Sprintf("kms is nil for object(%s/%s)",
+				object.BucketName, object.Name))
+			return nil, ErrKMSNotConfigured
+		}
+		key, err := yig.KMS.UnsealKey(yig.KMS.GetKeyID(), object.EncryptionKey,
+			crypto.Context{object.BucketName: path.Join(object.BucketName, object.Name)})
+		if err != nil {
+			return nil, err
+		}
+		encryptionKey = key[:]
+	} else { // SSE-C
+		if len(sseRequest.CopySourceSseCustomerKey) != 0 {
+			encryptionKey = sseRequest.CopySourceSseCustomerKey
+		} else {
+			encryptionKey = sseRequest.SseCustomerKey
+		}
+	}
+
+	// this object has only one part
+	if len(object.Parts) == 0 {
+		cephCluster, ok := yig.DataStorage[object.Location]
+		if !ok {
+			return nil, errors.New("Cannot find specified ceph cluster: " + object.Location)
+		}
+
+		if object.SseType == "" { // unencrypted object
+			reader, err := generatePartObjectReader(cephCluster, object, nil, startOffset, length)
+			if err != nil {
+				helper.Logger.Error(ctx, fmt.Sprintf("failed to get reader for(%s/%s) from offset(%d), length(%d), err: %v",
+					object.BucketName, object.Name, startOffset, length, err))
+				return nil, err
+			}
+			return reader, nil
+		}
+
+		// encrypted object
+		alignedReader, err := cephCluster.getAlignedReader(object.Pool, object.ObjectId, startOffset, length)
+		if err != nil {
+			return nil, err
+		}
+
+		decryptedReader, err := wrapAlignedEncryptionReader(alignedReader, startOffset, encryptionKey,
+			object.InitializationVector)
+		if err != nil {
+			reader.Close()
+			return nil, err
+		}
+
+		reader = &DecryptionReader{
+			AlignedReader: alignedReader,
+			DecryptReader: decryptedReader,
+		}
+		return reader, nil
+	}
+	// this object has multiparts.
+	reader = &MultipartReader{
+		ctx:           ctx,
+		Offset:        startOffset,
+		Len:           length,
+		ObjectMeta:    object,
+		Yig:           yig,
+		EncryptionKey: encryptionKey,
+	}
+	return reader, nil
 }
 
 func copyEncryptedPart(pool string, part *meta.Part, cephCluster *CephStorage, readOffset int64, length int64,
