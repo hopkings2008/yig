@@ -2,7 +2,6 @@ package main
 
 import (
 	"math/rand"
-	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -77,18 +76,10 @@ func main() {
 
 	iam.InitializeIamClient(allPluginMap)
 	// try to initialize the image process plugin.
-	err = ims.CreateImgProcessClient(allPluginMap)
+	err := ims.CreateImgProcessClient(allPluginMap)
 	if err != nil {
-		helper.Logger.Error("failed to create image process client")
+		helper.Logger.Error(nil, "failed to create image process client, err: %v", err)
 		panic("failed to create image process client")
-	}
-
-	// Add pprof handler
-	if helper.CONFIG.EnablePProf {
-		go func() {
-			err := http.ListenAndServe("0.0.0.0:8730", nil)
-			helper.Logger.Error("Start ppof err:", err)
-		}()
 	}
 
 	startAdminServer(adminServerConfig)

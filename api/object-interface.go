@@ -59,6 +59,8 @@ type ObjectLayer interface {
 	// Object operations.
 	GetObject(ctx context.Context, object *meta.Object, startOffset int64, length int64, writer io.Writer,
 		sse datatype.SseRequest) (err error)
+	GetObjectStream(ctx context.Context, object *meta.Object, startOffset int64,
+		length int64, sseRequest datatype.SseRequest) (reader io.ReadCloser, err error)
 	GetObjectInfo(ctx context.Context, bucket, object, version string, credential common.Credential) (objInfo *meta.Object,
 		err error)
 	PutObject(ctx context.Context, bucket, object string, credential common.Credential, size int64, data io.Reader,
