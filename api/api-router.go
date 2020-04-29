@@ -142,7 +142,7 @@ func RegisterAPIRouter(mux *router.Router, api ObjectAPIHandlers) {
 		bucket.Methods("GET").HandlerFunc(api.ListObjectsHandler)
 
 		// ImageProcessService
-		bucket.Methods("GET", "POST").Path("/{object:.+}").Queries("x-oss-process", "").HandlerFunc(api.ImageProcessServiceHandler)
+		bucket.Methods("GET", "POST").Path("/{object:.+}").Queries("x-oss-process", "").HandlerFunc(api.ImageServiceHandler)
 	}
 	/// Root operation
 
