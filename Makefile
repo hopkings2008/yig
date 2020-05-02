@@ -1,6 +1,4 @@
 .PHONY: build
-GOPATH = $(PWD)/build
-export GOPATH
 GOBIN = $(PWD)/build/bin
 export GOBIN
 URL = github.com/journeymidnight
