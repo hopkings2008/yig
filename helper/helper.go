@@ -3,6 +3,7 @@ package helper
 import (
 	"math/rand"
 	"reflect"
+	"sort"
 )
 
 // mimic `?:` operator
@@ -25,6 +26,19 @@ func Keys(v interface{}) []string {
 	for _, kv := range rv.MapKeys() {
 		result = append(result, kv.String())
 	}
+	return result
+}
+
+//Get keys of a map and sort.
+//If desc_order = true, the results are in descending order.
+//If desc_order =  false, the results are in ascending order
+func SortKeys(v interface{}, desc_order bool) []string {
+	result := Keys(v)
+	if desc_order {
+		sort.Sort(sort.Reverse(sort.StringSlice(result)))
+		return result
+	}
+	sort.Strings(result)
 	return result
 }
 
