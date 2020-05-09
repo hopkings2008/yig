@@ -367,7 +367,7 @@ func (t *TidbClient) ListObjects(ctx context.Context, bucketName, marker, verIdM
 			break
 		}
 	}
-	prefixes = helper.Keys(commonPrefixes)
+	prefixes = helper.SortKeys(commonPrefixes, false)
 	if versioned && lastListedVersion != 0 {
 		nextVerIdMarker = ConvertRawVersionToS3Version(lastListedVersion)
 	}
