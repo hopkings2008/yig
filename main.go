@@ -88,7 +88,7 @@ func main() {
 
 	iam.InitializeIamClient(allPluginMap)
 	// try to initialize the image process plugin.
-	err := ims.CreateImgProcessClient(allPluginMap)
+	err := ims.CreateImgProcessPlugin(allPluginMap)
 	if err != nil {
 		helper.Logger.Error(nil, "failed to create image process client, err: %v", err)
 		panic("failed to create image process client")
