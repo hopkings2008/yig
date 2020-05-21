@@ -16,8 +16,12 @@ const (
 )
 
 func EncodeCephStoreInfo(obj *types.Object) (string, error) {
+	storeType := STORAGE_DRIVER_CEPH_COMMON
+	if obj.Pool != "rabbit" {
+		storeType = STORAGE_DRIVER_CEPH_STRIP
+	}
 	cephInfo := CephStoreInfo{
-		Type:   STORAGE_DRIVER_CEPH_STRIP,
+		Type:   storeType,
 		Fsid:   obj.Location,
 		Pool:   obj.Pool,
 		Oid:    obj.ObjectId,
@@ -34,8 +38,12 @@ func EncodeCephStoreInfo(obj *types.Object) (string, error) {
 }
 
 func EncodeStoreInfo(obj *types.Object) (string, error) {
+	storeType := STORAGE_DRIVER_CEPH_COMMON
+	if obj.Pool != "rabbit" {
+		storeType = STORAGE_DRIVER_CEPH_STRIP
+	}
 	cephInfo := CephStoreInfo{
-		Type:   STORAGE_DRIVER_CEPH_STRIP,
+		Type:   storeType,
 		Fsid:   obj.Location,
 		Pool:   obj.Pool,
 		Oid:    obj.ObjectId,
@@ -49,7 +57,7 @@ func EncodeStoreInfo(obj *types.Object) (string, error) {
 	}
 
 	imgStore := ImgStoreInfo{
-		Type: STORAGE_DRIVER_CEPH_STRIP,
+		Type: storeType,
 		Size: obj.Size,
 		Info: string(cephInfoBuf),
 	}

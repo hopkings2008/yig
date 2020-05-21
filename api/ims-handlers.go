@@ -62,7 +62,6 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 		processStr = values[0]
 	case "POST":
 		// body: x-oss-process=image/circle,r_100
-		defer r.Body.Close()
 		// 0 <= content-length <= 2MB
 		if r.ContentLength <= 0 || r.ContentLength > (2<<20) {
 			helper.Logger.Error(ctx, fmt.Sprintf("got invalid content-length for image process url:%s", r.ContentLength, r.URL.String()))
@@ -148,6 +147,8 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 			r.URL.String(), err))
 		return
 	}
+	helper.Logger.Info(ctx, fmt.Sprintf("succeed to perform image process for %s/%s, return %d data.",
+		bucketName, objectName, imsResp.Length))
 	if n > 0 {
 		/*
 			If the whole write or only part of write is successfull,
@@ -197,7 +198,7 @@ func (api ObjectAPIHandlers) getModuleActions(ctx context.Context, value string,
 					if err != nil {
 						return "", nil, err
 					}
-					logObjeInfoStr, err := ims.EncodeCephStoreInfo(logoObjInfo)
+					logObjeInfoStr, err := ims.EncodeStoreInfo(logoObjInfo)
 					if err != nil {
 						return "", nil, err
 					}

@@ -15,8 +15,8 @@ const (
 )
 
 type ImsAction struct {
-	Action int
-	Params map[string]string
+	Action int               `json:"action"`
+	Params map[string]string `json:"params"`
 }
 
 type ImgStoreInfo struct {
@@ -32,9 +32,9 @@ type ImsReq struct {
 	// specified source media type
 	Type string `json:"type"`
 	// source image storage info
-	ImgSource ImgStoreInfo `json:"imgStoreInfo`
+	ImgSource ImgStoreInfo `json:"imgStoreInfo"`
 	// image actions, must keep the sequence from the http request.
-	ImsActions []*ImsAction `json:actions"`
+	ImsActions []*ImsAction `json:"actions"`
 }
 
 type ImsResp struct {
@@ -52,7 +52,7 @@ type CephStoreInfo struct {
 	// fsid defines the ceph cluster fsid
 	Fsid string `json:"fsid"`
 	// pool defines the pool for the objects
-	Pool string `json: "pool"`
+	Pool string `json:"pool"`
 	// oid defines the object id
 	Oid string `json:"oid"`
 	// offset defines where to read
