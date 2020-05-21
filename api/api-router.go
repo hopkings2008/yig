@@ -73,6 +73,10 @@ func RegisterAPIRouter(mux *router.Router, api ObjectAPIHandlers) {
 		bucket.Methods("GET").Path("/{object:.+}").HandlerFunc(api.GetObjectAclHandler).
 			Queries("acl", "")
 
+			// ImageProcessService
+		bucket.Methods("GET", "POST").Path("/{object:.+}").HandlerFunc(api.ImageServiceHandler).
+			Queries("x-oss-process", "{x-oss-process:.*}")
+
 		// AppendObject
 		bucket.Methods("POST").Path("/{object:.+}").HandlerFunc(api.AppendObjectHandler).Queries("append", "")
 		// PutObject
@@ -140,9 +144,6 @@ func RegisterAPIRouter(mux *router.Router, api ObjectAPIHandlers) {
 		bucket.Methods("PUT").HandlerFunc(api.PutBucketHandler)
 		// ListObjects
 		bucket.Methods("GET").HandlerFunc(api.ListObjectsHandler)
-
-		// ImageProcessService
-		bucket.Methods("GET", "POST").Path("/{object:.+}").Queries("x-oss-process", "").HandlerFunc(api.ImageServiceHandler)
 	}
 	/// Root operation
 
