@@ -194,6 +194,11 @@ func (api ObjectAPIHandlers) getModuleActions(ctx context.Context, value string,
 		np := len(params)
 		for j := 1; j < np; j++ {
 			vals := strings.Split(params[j], "_")
+			if len(vals) < 2 {
+				helper.Logger.Warn(ctx, fmt.Sprintf("skip the invalid param %s for req %s",
+					params[j], r.URL.String()))
+				continue
+			}
 			switch action.Action {
 			case ims.ACTION_WATERMARK:
 				if vals[0] == "image" {
@@ -211,6 +216,8 @@ func (api ObjectAPIHandlers) getModuleActions(ctx context.Context, value string,
 						return "", nil, err
 					}
 					action.Params[vals[0]] = logObjeInfoStr
+				} else {
+					action.Params[vals[0]] = vals[1]
 				}
 			default:
 				action.Params[vals[0]] = vals[1]
