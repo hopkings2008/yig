@@ -3,6 +3,7 @@ package ims
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/mods"
@@ -42,8 +43,9 @@ type ImsResp struct {
 	Type string
 	// the size of the image data buffer.
 	Length int64
-	// data: the processed image data buffer
-	Data []byte
+	// data: the processed image data reader.
+	// Note: it the caller's duty to close this reader.
+	Reader io.ReadCloser
 }
 
 type CephStoreInfo struct {

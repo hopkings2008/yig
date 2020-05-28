@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -137,14 +138,21 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 		WriteErrorResponse(w, r, err)
 		return
 	}
+	defer imsResp.Reader.Close()
 	// set the response header.
 	// content-type should be the original object content-type.
 	w.Header().Set("Content-Type", imsResp.Type)
 	w.Header().Set("Content-Length", strconv.FormatInt(imsResp.Length, 10))
-	n, err := w.Write(imsResp.Data)
+	n, err := io.Copy(w, imsResp.Reader)
 	if err != nil {
 		helper.Logger.Error(ctx, fmt.Sprintf("failed to write image process data to client for url: %s, err: %v",
 			r.URL.String(), err))
+		WriteErrorResponse(w, r, err)
+		return
+	}
+	if int64(n) != imsResp.Length {
+		helper.Logger.Error(ctx, fmt.Sprintf("the whole data size is %d, but only write %d", imsResp.Length, n))
+		WriteErrorResponse(w, r, errors.New(fmt.Sprintf("the whole data size is %d, but only write %d", imsResp.Length, n)))
 		return
 	}
 	helper.Logger.Info(ctx, fmt.Sprintf("succeed to perform image process for %s/%s, return %d data.",
