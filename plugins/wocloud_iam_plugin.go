@@ -127,11 +127,11 @@ func (a *Client) GetKeysByUid(uid string) (credentials []common.Credential, err 
 	return
 }
 
-func (a *Client) GetCredential(accessKey string) (credential common.Credential, err error) {
+func (a *Client) GetCredential(credReq common.CredReq) (credential common.Credential, err error) {
 	var slog = helper.Logger
 	var query Query
 	query.Action = "DescribeAccessKeys"
-	query.AccessKeys = append(query.AccessKeys, accessKey)
+	query.AccessKeys = append(query.AccessKeys, credReq.AccessKeyID)
 
 	b, err := json.Marshal(query)
 	if err != nil {

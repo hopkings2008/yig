@@ -27,6 +27,7 @@ type Config struct {
 	SSLKeyPath       string                  `toml:"ssl_key_path"`
 	SSLCertPath      string                  `toml:"ssl_cert_path"`
 	ZookeeperAddress string                  `toml:"zk_address"`
+	InternalDomain   string                  `toml:"internal_domain"`
 
 	InstanceId             string // if empty, generated one at server startup
 	ConcurrentRequestLimit int
@@ -144,6 +145,7 @@ func MarshalTOMLConfig() error {
 	CONFIG.SSLKeyPath = c.SSLKeyPath
 	CONFIG.SSLCertPath = c.SSLCertPath
 	CONFIG.ZookeeperAddress = c.ZookeeperAddress
+	CONFIG.InternalDomain = c.InternalDomain
 	CONFIG.DebugMode = c.DebugMode
 	CONFIG.AdminKey = c.AdminKey
 	CONFIG.LcDebug = c.LcDebug

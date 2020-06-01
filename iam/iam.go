@@ -14,11 +14,11 @@ import (
 var IsValidSecretKey = regexp.MustCompile(`^.{8,40}$`)
 
 // IsValidAccessKey - validate access key.
-var IsValidAccessKey = regexp.MustCompile(`^[a-zA-Z0-9\\-\\.\\_\\~]{5,20}$`)
+var IsValidAccessKey = regexp.MustCompile(`^[a-zA-Z0-9\\-\\.\\_\\~]{5,40}$`)
 
 type IamClient interface {
 	GetKeysByUid(string) ([]common.Credential, error)
-	GetCredential(string) (common.Credential, error)
+	GetCredential(common.CredReq) (common.Credential, error)
 }
 
 var iamClient IamClient
@@ -42,21 +42,22 @@ func InitializeIamClient(plugins map[string]*mods.YigPlugin) {
 	return
 }
 
-func GetCredential(accessKey string) (credential common.Credential, err error) {
+func GetCredential(credReq common.CredReq) (credential common.Credential, err error) {
 	if cache.IamCache == nil {
 		cache.InitializeIamCache()
 	}
+	//accessKey := credReq.AccessKeyID
 
-	credential, hit := cache.IamCache.Get(accessKey)
+	credential, hit := cache.IamCache.Get(credReq)
 	if hit {
 		return credential, nil
 	}
 
-	credential, err = iamClient.GetCredential(accessKey)
+	credential, err = iamClient.GetCredential(credReq)
 	if err != nil {
 		return credential, err
 	}
-	cache.IamCache.Set(accessKey, credential)
+	cache.IamCache.Set(credReq, credential)
 	return credential, nil
 
 }

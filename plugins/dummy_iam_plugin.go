@@ -35,11 +35,11 @@ func (d DebugIamClient) GetKeysByUid(uid string) (c []common.Credential, err err
 	return
 }
 
-func (d DebugIamClient) GetCredential(accessKey string) (c common.Credential, err error) {
+func (d DebugIamClient) GetCredential(credReq common.CredReq) (c common.Credential, err error) {
 	return common.Credential{
-		UserId:          accessKey,
-		DisplayName:     accessKey,
-		AccessKeyID:     accessKey,
+		UserId:          credReq.AccessKeyID,
+		DisplayName:     credReq.AccessKeyID,
+		AccessKeyID:     credReq.AccessKeyID,
 		SecretAccessKey: "hehehehe",
 	}, nil // For test now
 }

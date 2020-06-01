@@ -142,8 +142,19 @@ func DoesSignatureMatchV2(r *http.Request) (credential common.Credential, err er
 	if len(splitSignature) != 2 {
 		return credential, ErrMissingSignTag
 	}
+
 	accessKey := splitSignature[0]
-	credential, e := iam.GetCredential(accessKey)
+	iamCtx, err := common.GetIamContext(r.Context())
+	if err != nil {
+		helper.Logger.Error(r.Context(), "failed to get iam context. err:", err)
+		return credential, err
+	}
+	credential, e := iam.GetCredential(
+		common.CredReq{
+			AccessKeyID: accessKey,
+			ActionName:  iamCtx.ReqActionName,
+			NetworkType: iamCtx.NetWorkType,
+			RegionID:    iamCtx.Region})
 	helper.Logger.Info(r.Context(), "cre1:", credential.UserId, credential.DisplayName, credential.AccessKeyID, credential.SecretAccessKey)
 	if e != nil {
 		return credential, ErrInvalidAccessKeyID
@@ -200,7 +211,17 @@ func DoesPresignedSignatureMatchV2(r *http.Request) (credential common.Credentia
 	expires := query.Get("Expires")
 	signatureString := query.Get("Signature")
 
-	credential, e := iam.GetCredential(accessKey)
+	iamCtx, err := common.GetIamContext(r.Context())
+	if err != nil {
+		helper.Logger.Error(r.Context(), "failed to get iam context. err:", err)
+		return credential, err
+	}
+	credential, e := iam.GetCredential(
+		common.CredReq{
+			AccessKeyID: accessKey,
+			ActionName:  iamCtx.ReqActionName,
+			NetworkType: iamCtx.NetWorkType,
+			RegionID:    iamCtx.Region})
 	if e != nil {
 		return credential, ErrInvalidAccessKeyID
 	}
@@ -230,11 +251,21 @@ func DoesPresignedSignatureMatchV2(r *http.Request) (credential common.Credentia
 	return credential, dictate(r.Context(), credential.SecretAccessKey, stringToSign, signature)
 }
 
-func DoesPolicySignatureMatchV2(formValues map[string]string) (credential common.Credential,
+func DoesPolicySignatureMatchV2(r *http.Request, formValues map[string]string) (credential common.Credential,
 	err error) {
 
 	if accessKey, ok := formValues["Awsaccesskeyid"]; ok {
-		credential, err = iam.GetCredential(accessKey)
+		iamCtx, err := common.GetIamContext(r.Context())
+		if err != nil {
+			helper.Logger.Error(r.Context(), "failed to get iam context. err:", err)
+			return credential, err
+		}
+		credential, err = iam.GetCredential(
+			common.CredReq{
+				AccessKeyID: accessKey,
+				ActionName:  iamCtx.ReqActionName,
+				NetworkType: iamCtx.NetWorkType,
+				RegionID:    iamCtx.Region})
 		if err != nil {
 			return credential, ErrInvalidAccessKeyID
 		}
