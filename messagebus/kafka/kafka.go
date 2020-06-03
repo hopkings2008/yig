@@ -20,6 +20,7 @@ func (kf *Kafka) Start() error {
 	}
 
 	go func() {
+		helper.Logger.Info(nil, "kafka start goroutine")
 		defer close(kf.doneChan)
 		for e := range kf.producer.Events() {
 			switch ev := e.(type) {
@@ -28,9 +29,11 @@ func (kf *Kafka) Start() error {
 				if m.Opaque != nil {
 					switch v := m.Opaque.(type) {
 					case chan error:
-						go func(c chan error, err error) {
-							c <- err
-						}(v, m.TopicPartition.Error)
+						if v != nil {
+							go func(c chan error, err error) {
+								c <- err
+							}(v, m.TopicPartition.Error)
+						}
 					}
 				}
 				if m.TopicPartition.Error != nil {
@@ -81,6 +84,12 @@ func (kf *Kafka) AsyncSend(msg *types.Message) error {
 	if msg.Key != "" {
 		key = []byte(msg.Key)
 	}
-	kf.producer.ProduceChannel() <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: &msg.Topic, Partition: kafka.PartitionAny}, Key: key, Value: msg.Value, Opaque: msg.ErrChan}
+	kf.producer.ProduceChannel() <- &kafka.Message{
+		TopicPartition: kafka.TopicPartition{
+			Topic:     &msg.Topic,
+			Partition: kafka.PartitionAny},
+		Key:    key,
+		Value:  msg.Value,
+		Opaque: msg.ErrChan}
 	return nil
 }

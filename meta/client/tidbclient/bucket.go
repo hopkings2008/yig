@@ -259,7 +259,6 @@ func (t *TidbClient) ListObjects(ctx context.Context, bucketName, marker, verIdM
 
 		helper.Logger.Info(ctx, "query sql:", sqltext, "args:", args)
 
-		defer rows.Close()
 		for rows.Next() {
 			loopcount += 1
 			//fetch related date
@@ -282,6 +281,7 @@ func (t *TidbClient) ListObjects(ctx context.Context, bucketName, marker, verIdM
 			}
 			if err != nil {
 				helper.Logger.Error(ctx, "rows.Scan() err:", err)
+				rows.Close()
 				return
 			}
 			helper.Logger.Info(ctx, bucketname, name, version)
@@ -322,6 +322,7 @@ func (t *TidbClient) ListObjects(ctx context.Context, bucketName, marker, verIdM
 			o, err = t.GetObject(bucketname, name, s3VersionId)
 			if err != nil {
 				helper.Logger.Error(nil, fmt.Sprintf("ListObjects: failed to GetObject(%s, %s, %s), err: %v", bucketname, name, ConvertRawVersionToS3Version(version), err))
+				rows.Close()
 				return
 			}
 			if o.DeleteMarker && !withDeleteMarker {
@@ -343,6 +344,7 @@ func (t *TidbClient) ListObjects(ctx context.Context, bucketName, marker, verIdM
 
 			retObjects = append(retObjects, o)
 		}
+		rows.Close()
 		tfor := time.Now()
 		tdur = tfor.Sub(tqueryend).Nanoseconds()
 		if tdur/1000000 > 5000 {

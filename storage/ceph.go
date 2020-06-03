@@ -24,7 +24,7 @@ const (
 	OBJECT_SIZE         = 8 << 20         /* 8M */
 	BUFFER_SIZE         = 1 << 20         /* 1M */
 	MIN_CHUNK_SIZE      = 512 << 10       /* 512K */
-	MAX_CHUNK_SIZE      = 8 * BUFFER_SIZE /* 8M */
+	MAX_CHUNK_SIZE      = 1 * BUFFER_SIZE /* 1M */
 	SMALL_FILE_POOLNAME = "rabbit"
 	BIG_FILE_POOLNAME   = "tiger"
 	BIG_FILE_THRESHOLD  = 128 << 10 /* 128K */
@@ -274,12 +274,19 @@ func (cluster *CephStorage) Put(poolname string, oid string, data io.Reader) (si
 
 	var offset uint64 = 0
 
+	var totalReadDur int64
+
 	for {
 		start := time.Now()
 		count, err := data.Read(slice)
 		if err != nil && err != io.EOF {
 			drain_pending(pending)
 			return 0, fmt.Errorf("Read from client failed. pool:%s oid:%s", poolname, oid)
+		}
+		tread := time.Now().Sub(start).Nanoseconds()
+		totalReadDur += tread
+		if tread/1000000 > 300 {
+			helper.Logger.Info(nil, fmt.Sprintf("slow log: ceph read %d from %s uses %d(ns)", count, oid, tread))
 		}
 		if count == 0 {
 			break
@@ -347,6 +354,10 @@ func (cluster *CephStorage) Put(poolname string, oid string, data io.Reader) (si
 	}
 
 	size = int64(uint64(slice_offset) + offset)
+	if totalReadDur/1000000 > 300 {
+		helper.Logger.Info(nil, fmt.Sprintf("slow log: ceph read from client: it uses %d(ns) to read %d from %s",
+			totalReadDur, size, oid))
+	}
 	//write all remaining data
 	if slice_offset > 0 {
 		c = new(rados.AioCompletion)
