@@ -28,9 +28,11 @@ func (kf *Kafka) Start() error {
 				if m.Opaque != nil {
 					switch v := m.Opaque.(type) {
 					case chan error:
-						go func(c chan error, err error) {
-							c <- err
-						}(v, m.TopicPartition.Error)
+						if v != nil {
+							go func(c chan error, err error) {
+								c <- err
+							}(v, m.TopicPartition.Error)
+						}
 					}
 				}
 				if m.TopicPartition.Error != nil {

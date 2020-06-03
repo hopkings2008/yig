@@ -8,10 +8,11 @@ import (
 	"sync"
 
 	"fmt"
+	"time"
+
 	"github.com/journeymidnight/radoshttpd/rados"
 	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/log"
-	"time"
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 	OBJECT_SIZE         = 8 << 20         /* 8M */
 	BUFFER_SIZE         = 1 << 20         /* 1M */
 	MIN_CHUNK_SIZE      = 512 << 10       /* 512K */
-	MAX_CHUNK_SIZE      = 8 * BUFFER_SIZE /* 8M */
+	MAX_CHUNK_SIZE      = 1 * BUFFER_SIZE /* 1M */
 	SMALL_FILE_POOLNAME = "rabbit"
 	BIG_FILE_POOLNAME   = "tiger"
 	BIG_FILE_THRESHOLD  = 128 << 10 /* 128K */
@@ -275,6 +276,7 @@ func (cluster *CephStorage) Put(poolname string, oid string, data io.Reader) (si
 	var slice = pending_data[0:current_upload_window]
 
 	var offset uint64 = 0
+	var totalReadTime int64
 
 	for {
 		start := time.Now()
@@ -282,6 +284,11 @@ func (cluster *CephStorage) Put(poolname string, oid string, data io.Reader) (si
 		if err != nil && err != io.EOF {
 			drain_pending(pending)
 			return 0, fmt.Errorf("Read from client failed. pool:%s oid:%s", poolname, oid)
+		}
+		tread := time.Now().Sub(start).Nanoseconds()
+		totalReadTime += tread
+		if tread/1000000 > 300 {
+			helper.Logger.Printf(5, "slow log: ceph put %s read %d takes %d(ns)", oid, count, tread)
 		}
 		if count == 0 {
 			break
@@ -347,8 +354,10 @@ func (cluster *CephStorage) Put(poolname string, oid string, data io.Reader) (si
 		slice_offset = 0
 		slice = pending_data[0:current_upload_window]
 	}
-
 	size = int64(uint64(slice_offset) + offset)
+	if totalReadTime/1000000 > 300 {
+		helper.Logger.Printf(5, "slow log: ceph put %s, read %d takes %d(ns)", oid, size, totalReadTime)
+	}
 	//write all remaining data
 	if slice_offset > 0 {
 		c = new(rados.AioCompletion)
