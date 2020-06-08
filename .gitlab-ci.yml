@@ -1,4 +1,4 @@
-image: centos:v8
+image: centos:v9
 
 variables:
   GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_COMMIT_SHORT_SHA/yig
