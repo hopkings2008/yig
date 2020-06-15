@@ -125,10 +125,29 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 		Size: obj.Size,
 		Info: imgCephStoreInfoStr,
 	}
+
 	imsReq := &ims.ImsReq{
-		Type:       obj.ContentType,
 		ImsActions: actions,
 		ImgSource:  imgStoreInfo,
+	}
+
+	if "" != obj.ContentType {
+		contentType := strings.TrimPrefix(obj.ContentType, "image/")
+		if contentType != "" {
+			imsReq.Type = fmt.Sprintf(".%s", contentType)
+		}
+	}
+
+	if "" == imsReq.Type {
+		// check object name
+		elems := strings.Split(obj.Name, ".")
+		if len(elems) >= 2 {
+			imsReq.Type = fmt.Sprintf(".%s", elems[1])
+		}
+	}
+	if "" == imsReq.Type {
+		// set default to png
+		imsReq.Type = ".png"
 	}
 
 	imsResp, err := imgProcessPlugin.Do(ctx, imsReq)
