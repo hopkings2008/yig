@@ -33,6 +33,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/journeymidnight/yig/api/datatype"
 	. "github.com/journeymidnight/yig/error"
+	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/iam"
 	"github.com/journeymidnight/yig/iam/common"
 )
@@ -94,8 +95,18 @@ func CalculateSeedSignature(r *http.Request) (credential common.Credential, sign
 	if err != nil {
 		return
 	}
+	iamCtx, err := common.GetIamContext(r.Context())
+	if err != nil {
+		helper.Logger.Error(r.Context(), "failed to get iam context. err:", err)
+		return credential, "", "", time.Time{}, ErrInvalidAccessKeyID
+	}
 
-	credential, e := iam.GetCredential(signV4Values.Credential.accessKey)
+	credential, e := iam.GetCredential(
+		common.CredReq{
+			AccessKeyID: signV4Values.Credential.accessKey,
+			ActionName:  iamCtx.ReqActionName,
+			NetworkType: iamCtx.NetWorkType,
+			RegionID:    iamCtx.Region})
 	if e != nil {
 		return credential, "", "", time.Time{}, ErrInvalidAccessKeyID
 	}

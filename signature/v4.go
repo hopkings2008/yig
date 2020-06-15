@@ -33,6 +33,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/journeymidnight/yig/helper"
+
 	. "github.com/journeymidnight/yig/api/datatype"
 	. "github.com/journeymidnight/yig/error"
 	"github.com/journeymidnight/yig/iam"
@@ -142,7 +144,7 @@ func getSignature(signingKey []byte, stringToSign string) string {
 // doesPolicySignatureMatch - Verify query headers with post policy
 //     - http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
 // returns true if matches, false otherwise. if error is not nil then it is always false
-func DoesPolicySignatureMatchV4(formValues map[string]string) (credential common.Credential, err error) {
+func DoesPolicySignatureMatchV4(r *http.Request, formValues map[string]string) (credential common.Credential, err error) {
 	// Parse credential tag.
 	credHeader, err := parseCredential(formValues["X-Amz-Credential"])
 	if err != nil {
@@ -161,7 +163,17 @@ func DoesPolicySignatureMatchV4(formValues map[string]string) (credential common
 		return credential, ErrMalformedDate
 	}
 
-	credential, e = iam.GetCredential(credHeader.accessKey)
+	iamCtx, err := common.GetIamContext(r.Context())
+	if err != nil {
+		helper.Logger.Error(r.Context(), "failed to get iam context. err:", err)
+		return credential, err
+	}
+	credential, e = iam.GetCredential(
+		common.CredReq{
+			AccessKeyID: credHeader.accessKey,
+			ActionName:  iamCtx.ReqActionName,
+			NetworkType: iamCtx.NetWorkType,
+			RegionID:    iamCtx.Region})
 	if e != nil {
 		return credential, ErrInvalidAccessKeyID
 	}
@@ -189,7 +201,17 @@ func DoesPresignedSignatureMatchV4(r *http.Request,
 		return credential, err
 	}
 
-	credential, e := iam.GetCredential(preSignValues.Credential.accessKey)
+	iamCtx, err := common.GetIamContext(r.Context())
+	if err != nil {
+		helper.Logger.Error(r.Context(), "failed to get iam context. err:", err)
+		return credential, err
+	}
+	credential, e := iam.GetCredential(
+		common.CredReq{
+			AccessKeyID: preSignValues.Credential.accessKey,
+			ActionName:  iamCtx.ReqActionName,
+			NetworkType: iamCtx.NetWorkType,
+			RegionID:    iamCtx.Region})
 	if e != nil {
 		return credential, ErrInvalidAccessKeyID
 	}
@@ -248,7 +270,17 @@ func getCredentialUnverified(r *http.Request) (credential common.Credential, err
 		return credential, err
 	}
 
-	credential, e := iam.GetCredential(signV4Values.Credential.accessKey)
+	iamCtx, err := common.GetIamContext(r.Context())
+	if err != nil {
+		helper.Logger.Error(r.Context(), "failed to get iam context. err:", err)
+		return credential, err
+	}
+	credential, e := iam.GetCredential(
+		common.CredReq{
+			AccessKeyID: signV4Values.Credential.accessKey,
+			ActionName:  iamCtx.ReqActionName,
+			NetworkType: iamCtx.NetWorkType,
+			RegionID:    iamCtx.Region})
 	if e != nil {
 		return credential, ErrInvalidAccessKeyID
 	}
@@ -320,7 +352,17 @@ func DoesSignatureMatchV4(hashedPayload string, r *http.Request,
 	// Get string to sign from canonical request.
 	stringToSign := getStringToSign(canonicalRequest, t, region)
 
-	credential, e := iam.GetCredential(signV4Values.Credential.accessKey)
+	iamCtx, err := common.GetIamContext(r.Context())
+	if err != nil {
+		helper.Logger.Error(r.Context(), "failed to get iam context. err:", err)
+		return credential, err
+	}
+	credential, e := iam.GetCredential(
+		common.CredReq{
+			AccessKeyID: signV4Values.Credential.accessKey,
+			ActionName:  iamCtx.ReqActionName,
+			NetworkType: iamCtx.NetWorkType,
+			RegionID:    iamCtx.Region})
 	if e != nil {
 		return credential, ErrInvalidAccessKeyID
 	}

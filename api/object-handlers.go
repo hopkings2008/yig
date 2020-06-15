@@ -195,6 +195,7 @@ func (api ObjectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 	vars := mux.Vars(r)
 	bucketName = vars["bucket"]
 	objectName = vars["object"]
+	r = generateIamCtxRequest(r)
 
 	var credential common.Credential
 	var err error
@@ -327,6 +328,7 @@ func (api ObjectAPIHandlers) HeadObjectHandler(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 	bucketName = vars["bucket"]
 	objectName = vars["object"]
+	r = generateIamCtxRequest(r)
 
 	var credential common.Credential
 	var err error
@@ -419,6 +421,7 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 	targetBucketName := vars["bucket"]
 	targetObjectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	var credential common.Credential
 	var err error
@@ -665,6 +668,7 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 	objectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	var authType = signature.GetRequestAuthType(r)
 	var err error
@@ -809,6 +813,7 @@ func (api ObjectAPIHandlers) AppendObjectHandler(w http.ResponseWriter, r *http.
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 	objectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	var authType = signature.GetRequestAuthType(r)
 	var err error
@@ -995,6 +1000,7 @@ func (api ObjectAPIHandlers) PutObjectAclHandler(w http.ResponseWriter, r *http.
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 	objectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	var credential common.Credential
 	var err error
@@ -1053,6 +1059,7 @@ func (api ObjectAPIHandlers) GetObjectAclHandler(w http.ResponseWriter, r *http.
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 	objectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	var credential common.Credential
 	var err error
@@ -1104,6 +1111,7 @@ func (api ObjectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r 
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 	objectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	if !isValidObjectName(objectName) {
 		WriteErrorResponse(w, r, ErrInvalidObjectName)
@@ -1181,6 +1189,7 @@ func (api ObjectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 	objectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	authType := signature.GetRequestAuthType(r)
 
@@ -1282,6 +1291,7 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 	vars := mux.Vars(r)
 	targetBucketName := vars["bucket"]
 	targetObjectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	if !isValidObjectName(targetObjectName) {
 		WriteErrorResponse(w, r, ErrInvalidObjectName)
@@ -1459,6 +1469,7 @@ func (api ObjectAPIHandlers) AbortMultipartUploadHandler(w http.ResponseWriter, 
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 	objectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	var credential common.Credential
 	var err error
@@ -1493,6 +1504,7 @@ func (api ObjectAPIHandlers) ListObjectPartsHandler(w http.ResponseWriter, r *ht
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 	objectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	var credential common.Credential
 	var err error
@@ -1533,6 +1545,7 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 	objectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	// Get upload id.
 	uploadId := r.URL.Query().Get("uploadId")
@@ -1644,6 +1657,7 @@ func (api ObjectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 	objectName := vars["object"]
+	r = generateIamCtxRequest(r)
 
 	var credential common.Credential
 	var err error
@@ -1690,6 +1704,7 @@ var ValidSuccessActionStatus = []string{"200", "201", "204"}
 
 func (api ObjectAPIHandlers) PostObjectHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
+	r = generateIamCtxRequest(r)
 	// Here the parameter is the size of the form data that should
 	// be loaded in memory, the remaining being put in temporary files.
 	reader, err := r.MultipartReader()
@@ -1727,9 +1742,9 @@ func (api ObjectAPIHandlers) PostObjectHandler(w http.ResponseWriter, r *http.Re
 	helper.Logger.Info(r.Context(), "type", postPolicyType)
 	switch postPolicyType {
 	case signature.PostPolicyV2:
-		credential, err = signature.DoesPolicySignatureMatchV2(formValues)
+		credential, err = signature.DoesPolicySignatureMatchV2(r, formValues)
 	case signature.PostPolicyV4:
-		credential, err = signature.DoesPolicySignatureMatchV4(formValues)
+		credential, err = signature.DoesPolicySignatureMatchV4(r, formValues)
 	case signature.PostPolicyAnonymous:
 		if bucket.ACL.CannedAcl != "public-read-write" {
 			WriteErrorResponse(w, r, ErrAccessDenied)

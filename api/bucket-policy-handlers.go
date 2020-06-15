@@ -45,6 +45,7 @@ func (api ObjectAPIHandlers) PutBucketPolicyHandler(w http.ResponseWriter, r *ht
 	helper.Logger.Info(r.Context(), "PutBucketPolicyHandler", "enter")
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
+	r = generateIamCtxRequest(r)
 
 	var credential common.Credential
 	var err error
@@ -101,6 +102,8 @@ func (api ObjectAPIHandlers) PutBucketPolicyHandler(w http.ResponseWriter, r *ht
 func (api ObjectAPIHandlers) DeleteBucketPolicyHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
+	r = generateIamCtxRequest(r)
+
 	var credential common.Credential
 	var err error
 	switch signature.GetRequestAuthType(r) {
@@ -132,6 +135,8 @@ func (api ObjectAPIHandlers) GetBucketPolicyHandler(w http.ResponseWriter, r *ht
 	helper.Logger.Info(r.Context(), "GetBucketPolicyHandler", "enter")
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
+	r = generateIamCtxRequest(r)
+
 	var credential common.Credential
 	var err error
 	switch signature.GetRequestAuthType(r) {

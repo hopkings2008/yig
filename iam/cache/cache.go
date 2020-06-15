@@ -3,6 +3,7 @@ package cache
 import (
 	"sync"
 	"time"
+
 	"github.com/journeymidnight/yig/iam/common"
 )
 
@@ -56,8 +57,9 @@ func InitializeIamCache() {
 	go cacheInvalidator()
 }
 
-func (c *cache) Get(key string) (credential common.Credential, hit bool) {
+func (c *cache) Get(credReq common.CredReq) (credential common.Credential, hit bool) {
 	c.lock.RLock()
+	key := credReq.CacheKey()
 	entry, hit := c.cache[key]
 	c.lock.RUnlock()
 	if hit {
@@ -66,12 +68,13 @@ func (c *cache) Get(key string) (credential common.Credential, hit bool) {
 	return credential, hit
 }
 
-func (c *cache) Set(key string, credential common.Credential) {
+func (c *cache) Set(credReq common.CredReq, credential common.Credential) {
 	entry := cacheEntry{
 		createTime: time.Now(),
 		credential: credential,
 	}
 	c.lock.Lock()
+	key := credReq.CacheKey()
 	c.cache[key] = entry
 	c.lock.Unlock()
 }

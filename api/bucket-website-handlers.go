@@ -16,6 +16,8 @@ import (
 
 func (api ObjectAPIHandlers) PutBucketWebsiteHandler(w http.ResponseWriter, r *http.Request) {
 	helper.Logger.Info(r.Context(), "PutBucketWebsiteHandler", "enter")
+	r = generateIamCtxRequest(r)
+
 	ctx := getRequestContext(r)
 
 	var credential common.Credential
@@ -67,6 +69,8 @@ func (api ObjectAPIHandlers) PutBucketWebsiteHandler(w http.ResponseWriter, r *h
 
 func (api ObjectAPIHandlers) GetBucketWebsiteHandler(w http.ResponseWriter, r *http.Request) {
 	helper.Logger.Info(r.Context(), "GetBucketWebsiteHandler", "enter")
+	r = generateIamCtxRequest(r)
+
 	ctx := getRequestContext(r)
 
 	var credential common.Credential
@@ -115,6 +119,8 @@ func (api ObjectAPIHandlers) GetBucketWebsiteHandler(w http.ResponseWriter, r *h
 }
 
 func (api ObjectAPIHandlers) DeleteBucketWebsiteHandler(w http.ResponseWriter, r *http.Request) {
+	r = generateIamCtxRequest(r)
+
 	ctx := getRequestContext(r)
 
 	var credential common.Credential
