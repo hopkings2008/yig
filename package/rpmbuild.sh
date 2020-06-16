@@ -7,7 +7,12 @@ cd $GITROOT
 VER=1.1.2
 echo "Git get full depth..."
 git fetch --unshallow
-REL=`git rev-parse --short HEAD`git
+if [ x$1 != x ]
+then
+  REL=`git rev-parse --short HEAD`git.$1
+else
+  REL=`git rev-parse --short HEAD`git
+fi
 REL=`git log --oneline|wc -l`.$REL
 RPMTOPDIR=$GITROOT/rpm-build
 echo "Ver: $VER, Release: $REL"
