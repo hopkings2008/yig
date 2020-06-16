@@ -68,6 +68,7 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %config(noreplace) /etc/yig/yig.toml
+/etc/yig/actions.json
 /usr/bin/yig_admin
 /usr/bin/yig
 /usr/bin/yig_delete_daemon
