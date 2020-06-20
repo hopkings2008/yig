@@ -171,6 +171,33 @@ const (
 	ErrInvalidErrorDocumentKey
 	ErrInvalidLifcycleDocument
 	ErrInvalidNumberOfRules
+
+	//IAM error
+	ErrIAMInvalidArgs
+	ErrIAMUnauthorized
+	ErrIAMAccessKeyIdNotExist
+	ErrIAMUserNotExist
+	ErrIAMAccountNotExist
+	ErrIAMOperationRefused
+	ErrIAMNotOpenOSSService
+	ErrIAMResourcePackExcess
+	ErrIAMResourcePackExpired
+	ErrIAMResourcePackExcessAndExpired
+	ErrIAMResourcePackNotPurchased
+	ErrIAMSignatureFailed
+	ErrIAMDownstreamTrafficPackExcess
+	ErrIAMDownstreamTrafficPackExpired
+	ErrIAMDownstreamTrafficPackExpiredAndExcess
+	ErrIAMDownstreamTrafficPackNotPurchased
+	ErrIAMRequestsExceeded
+	ErrIAMRequestsExpired
+	ErrIAMRequestsExpiredAndExceeded
+	ErrIAMRequestsPackUnpurchased
+	ErrIAMRequestFailed
+	ErrIAMQueryFailed
+	ErrIAMResponseBodyReadFailed
+	ErrIAMResponseBodyParseFailed
+	ErrIAMUnknown
 )
 
 // error code to APIError structure, these fields carry respective
@@ -781,6 +808,131 @@ var ErrorCodeResponse = map[ApiErrorCode]ApiErrorStruct{
 		AwsErrorCode:   "InvalidNumberOfRules",
 		Description:    "The number of rules you provided exceeds is invalid",
 		HttpStatusCode: http.StatusBadRequest,
+	},
+	ErrIAMInvalidArgs: {
+		AwsErrorCode:   "IAMInvalidArgs",
+		Description:    "IAM args is null or invalied ",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMUnauthorized: {
+		AwsErrorCode:   "IAMUnauthorized",
+		Description:    "IAM authorized failed ",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMAccessKeyIdNotExist: {
+		AwsErrorCode:   "IAMAccessKeyNotExist",
+		Description:    "The access key do not exist",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMUserNotExist: {
+		AwsErrorCode:   "IAMUserNotExist",
+		Description:    "IAM user not exist",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMAccountNotExist: {
+		AwsErrorCode:   "IAMAccountNotExist",
+		Description:    "The main account of iam do not exist",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMOperationRefused: {
+		AwsErrorCode:   "IAMOperationRefused",
+		Description:    "The operation of iam is refused",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMNotOpenOSSService: {
+		AwsErrorCode:   "IAMNotOpenOSSService",
+		Description:    "OSS server does not be opened",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMResourcePackExcess: {
+		AwsErrorCode:   "IAMResourcePackExcess",
+		Description:    "Standard storage bag overage",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMResourcePackExpired: {
+		AwsErrorCode:   "IAMResourcePackExpired",
+		Description:    "Standard storage package expires",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMResourcePackExcessAndExpired: {
+		AwsErrorCode:   "IAMResourcePackExcessAndExpired",
+		Description:    "Standard storage package is overdue and expires",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMResourcePackNotPurchased: {
+		AwsErrorCode:   "IAMResourcePackNotPurchased",
+		Description:    "Standard storage package not purchased",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMSignatureFailed: {
+		AwsErrorCode:   "IAMSignatureFailed",
+		Description:    "Signature verification failed",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMDownstreamTrafficPackExcess: {
+		AwsErrorCode:   "IAMDownstreamTrafficPackExcess",
+		Description:    "Downstream traffic package excess",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMDownstreamTrafficPackExpired: {
+		AwsErrorCode:   "IAMDownstreamTrafficPackExpired",
+		Description:    "Downstream traffic package expires",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMDownstreamTrafficPackExpiredAndExcess: {
+		AwsErrorCode:   "IAMDownstreamTrafficPackExpiredAndExcess",
+		Description:    "Downstream traffic package is overdue and expires",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMDownstreamTrafficPackNotPurchased: {
+		AwsErrorCode:   "IAMDownstreamTrafficPackNotPurchased",
+		Description:    "Downstream traffic package not purchased",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMRequestsExceeded: {
+		AwsErrorCode:   "IAMRequestsExceeded",
+		Description:    "Requests exceeded",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMRequestsExpired: {
+		AwsErrorCode:   "IAMRequestsExpired",
+		Description:    "Requests expired",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMRequestsExpiredAndExceeded: {
+		AwsErrorCode:   "IAMRequestsExpiredAndExceeded",
+		Description:    "Requests exceeded and expired",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMRequestsPackUnpurchased: {
+		AwsErrorCode:   "IAMRequestsPackUnpurchased",
+		Description:    "Unpurchased Requests Package",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMRequestFailed: {
+		AwsErrorCode:   "IAMRequestFailed",
+		Description:    "The request of iam send failed",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMQueryFailed: {
+		AwsErrorCode:   "IAMQueryFailed",
+		Description:    "Query iam server to failed",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMResponseBodyReadFailed: {
+		AwsErrorCode:   "IAMResponseBodyReadFailed",
+		Description:    "Reading response body of iam failed",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMResponseBodyParseFailed: {
+		AwsErrorCode:   "IAMResponseBodyParseFailed",
+		Description:    "Parsing response body of iam failed",
+		HttpStatusCode: http.StatusForbidden,
+	},
+	ErrIAMUnknown: {
+		AwsErrorCode:   "IAMUnknown",
+		Description:    "IAM has an unknown error",
+		HttpStatusCode: http.StatusForbidden,
 	},
 }
 
