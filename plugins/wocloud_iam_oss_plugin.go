@@ -22,6 +22,7 @@ import (
 
 	"github.com/journeymidnight/yig/circuitbreak"
 	"github.com/journeymidnight/yig/helper"
+	. "github.com/journeymidnight/yig/error"
 	"github.com/journeymidnight/yig/iam/common"
 	"github.com/journeymidnight/yig/mods"
 )
@@ -69,6 +70,53 @@ type Client struct {
 	privateKey  []byte
 }
 
+func getIAMReturnCode(code string) error {
+	switch code {
+	case "1001":
+		return ErrIAMInvalidArgs
+	case "50000":	
+		return ErrIAMUnauthorized
+	case "50001":	
+		return ErrIAMAccessKeyIdNotExist
+	case "50002":	
+		return ErrIAMUserNotExist
+	case "50003":	
+		return ErrIAMAccountNotExist
+	case "50004":	
+		return ErrIAMOperationRefused
+	case "50005":	
+		return ErrIAMNotOpenOSSService
+	case "50006":	
+		return ErrIAMResourcePackExcess
+	case "50007":	
+		return ErrIAMResourcePackExpired
+	case "50008":	
+		return ErrIAMResourcePackExcessAndExpired
+	case "50009":	
+		return ErrIAMResourcePackNotPurchased
+	case "50010":	
+		return ErrIAMSignatureFailed
+	case "50012":	
+		return ErrIAMDownstreamTrafficPackExcess
+	case "50013":	
+		return ErrIAMDownstreamTrafficPackExpired
+	case "50014":	
+		return ErrIAMDownstreamTrafficPackExpiredAndExcess
+	case "50015":	
+		return ErrIAMDownstreamTrafficPackNotPurchased
+	case "50016":	
+		return ErrIAMRequestsExceeded
+	case "50017":	
+		return ErrIAMRequestsExpired
+	case "50018":	
+		return ErrIAMRequestsExpiredAndExceeded
+	case "50019":	
+		return ErrIAMRequestsPackUnpurchased
+	default:	
+		return ErrIAMUnknown
+	}	
+	return nil
+}
 // GetKeysByUid get credential according to uid
 func (a *Client) GetKeysByUid(uid string) (credentials []common.Credential, err error) {
 	return nil, fmt.Errorf("unsupported api")
@@ -141,7 +189,7 @@ func (a *Client) GetCredential(credReq common.CredReq) (credential common.Creden
 		query.Expression = expression
 	} else {
 		helper.Logger.Error(nil, "unkown expression for action ", credReq.ActionName)
-		return credential, common.ErrAccessKeyNotExist
+		return credential, ErrIAMAccessKeyIdNotExist
 	}
 
 	strToSign := a.getStringToSign(query)
@@ -149,7 +197,7 @@ func (a *Client) GetCredential(credReq common.CredReq) (credential common.Creden
 	sign, err := privateEncryptMD5withRSA([]byte(strToSign), a.privateKey)
 	if err != nil {
 		helper.Logger.Error(nil, "failed to calc signature. err:", err)
-		return credential, common.ErrAccessKeyNotExist
+		return credential, ErrIAMAccessKeyIdNotExist
 	}
 	query.Sign = sign
 
@@ -173,7 +221,8 @@ func (a *Client) GetCredential(credReq common.CredReq) (credential common.Creden
 	request, err := http.NewRequest("POST", a.iamEndpoint, bytes.NewReader(b))
 	if err != nil {
 		helper.Logger.Error(nil, "failed to new POST request. err:", err)
-		return credential, err
+
+		return credential, ErrIAMRequestFailed
 	}
 
 	request.Header.Set("content-type", "application/json")
@@ -181,18 +230,21 @@ func (a *Client) GetCredential(credReq common.CredReq) (credential common.Creden
 	response, err := a.httpClient.Do(request)
 	if err != nil {
 		helper.Logger.Error(nil, "failed to send POST request. err:", err)
-		return credential, err
+
+		return credential, ErrIAMRequestFailed
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
 		helper.Logger.Error(nil, "failed to query iam server, http code is not 200. code:", response.StatusCode)
-		return credential, errors.New("Query to IAM failed as status != 200")
+
+		return credential, ErrIAMQueryFailed
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		helper.Logger.Error(nil, "failed to read response body. err:", err)
-		return credential, err
+
+		return credential, ErrIAMResponseBodyReadFailed
 	}
 	helper.Logger.Info(nil, "iam:", a.iamEndpoint)
 	helper.Logger.Info(nil, "request:", string(b))
@@ -202,11 +254,12 @@ func (a *Client) GetCredential(credReq common.CredReq) (credential common.Creden
 	err = json.Unmarshal(body, &queryRetAll)
 	if err != nil {
 		helper.Logger.Error(nil, "failed to unmarshal json from response body. err:", err)
-		return credential, err
+
+		return credential, ErrIAMResponseBodyParseFailed
 	}
 	if queryRetAll.Status != "200" {
 		helper.Logger.Error(nil, "status in iam response is not 200, status:", queryRetAll.Status, " code:", queryRetAll.Code, " msg:", queryRetAll.Msg)
-		return credential, errors.New("failed to query iam, status code is not 200")
+		return credential, getIAMReturnCode(queryRetAll.Code)
 	}
 
 	credential.UserId = fmt.Sprintf("%v", queryRetAll.Data.MainUserId)
