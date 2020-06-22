@@ -54,9 +54,9 @@ func (yig *YigStorage) MakeBucket(ctx context.Context, bucketName string, acl da
 	err = yig.MetaStorage.AddBucketForUser(ctx, bucketName, credential.UserId)
 	if err != nil { // roll back bucket table, i.e. remove inserted bucket
 		yig.Logger.Info(ctx, "Error AddBucketForUser: ", err)
-		err = yig.MetaStorage.Client.DeleteBucket(bucket)
-		if err != nil {
-			yig.Logger.Info(ctx, "Error deleting: ", err)
+		derr := yig.MetaStorage.Client.DeleteBucket(bucket)
+		if derr != nil {
+			yig.Logger.Info(ctx, "Error deleting: ", derr)
 			yig.Logger.Info(ctx, "Leaving junk bucket unremoved: ", bucketName)
 			return err
 		}
@@ -653,7 +653,7 @@ func (yig *YigStorage) ListVersionedObjects(ctx context.Context, credential comm
 		result.NextKeyMarker = url.QueryEscape(result.NextKeyMarker)
 	}
 
-	helper.Logger.Info(ctx, "ListVersionedObjects result:", len(result.Objects), result.IsTruncated, result.NextKeyMarker, result.NextVersionIdMarker, )
+	helper.Logger.Info(ctx, "ListVersionedObjects result:", len(result.Objects), result.IsTruncated, result.NextKeyMarker, result.NextVersionIdMarker)
 
 	return
 }
