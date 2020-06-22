@@ -758,6 +758,12 @@ func (api ObjectAPIHandlers) PutBucketVersioningHandler(w http.ResponseWriter, r
 		WriteErrorResponse(w, r, err)
 		return
 	}
+
+	// TODO disable Versioning, to quick fix ListObjects slow issue.
+	helper.Logger.Error(r.Context(), "Versioning is not supported now.")
+	WriteErrorResponse(w, r, ErrInternalError)
+	return
+
 	err = api.ObjectAPI.SetBucketVersioning(r.Context(), bucketName, versioning, credential)
 	if err != nil {
 		WriteErrorResponse(w, r, err)

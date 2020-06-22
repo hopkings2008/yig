@@ -206,7 +206,8 @@ func (t *TidbClient) ListObjects(ctx context.Context, bucketName, marker, verIdM
 
 		if !versioned {
 			// list objects, order by bucketname, name, version. So the latest will be returned.
-			sqltext = "select distinct bucketname,name from objects where bucketName=?"
+			// TODO delete distinct to quick fix !versioned ListObjects slow issue.
+			sqltext = "select bucketname,name from objects where bucketName=?"
 		} else {
 			// list object versions.
 			sqltext = "select bucketname,name,version from objects where bucketName=?"

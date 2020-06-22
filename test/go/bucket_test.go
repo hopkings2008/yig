@@ -1,7 +1,6 @@
 package _go
 
 import (
-	"strconv"
 	"testing"
 
 	. "github.com/journeymidnight/yig/test/go/lib"
@@ -41,6 +40,7 @@ func Test_DeleteBucket(t *testing.T) {
 	t.Log("DeleteBucket Success.")
 }
 
+/*
 func Test_ListObjectVersionsWithMaxKey(t *testing.T) {
 	sc := NewS3()
 	err := sc.MakeBucket(TEST_BUCKET)
@@ -107,6 +107,7 @@ func Test_ListObjectVersionsWithMaxKey(t *testing.T) {
 
 	t.Log("ListObjectVersions Success.")
 }
+*/
 
 /*
 func Test_ListObjectVersions10000(t *testing.T) {
