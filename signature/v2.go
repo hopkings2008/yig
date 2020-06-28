@@ -157,7 +157,7 @@ func DoesSignatureMatchV2(r *http.Request) (credential common.Credential, err er
 			RegionID:    iamCtx.Region})
 	helper.Logger.Info(r.Context(), "cre1:", credential.UserId, credential.DisplayName, credential.AccessKeyID, credential.SecretAccessKey)
 	if e != nil {
-		return credential, ErrInvalidAccessKeyID
+		return credential, e
 	}
 	signature, e := base64.StdEncoding.DecodeString(splitSignature[1])
 	if e != nil {
@@ -223,7 +223,7 @@ func DoesPresignedSignatureMatchV2(r *http.Request) (credential common.Credentia
 			NetworkType: iamCtx.NetWorkType,
 			RegionID:    iamCtx.Region})
 	if e != nil {
-		return credential, ErrInvalidAccessKeyID
+		return credential, e
 	}
 	signature, e := base64.StdEncoding.DecodeString(signatureString)
 	if e != nil {
@@ -267,7 +267,7 @@ func DoesPolicySignatureMatchV2(r *http.Request, formValues map[string]string) (
 				NetworkType: iamCtx.NetWorkType,
 				RegionID:    iamCtx.Region})
 		if err != nil {
-			return credential, ErrInvalidAccessKeyID
+			return credential, err
 		}
 	} else {
 		return credential, ErrMissingFields

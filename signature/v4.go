@@ -175,7 +175,7 @@ func DoesPolicySignatureMatchV4(r *http.Request, formValues map[string]string) (
 			NetworkType: iamCtx.NetWorkType,
 			RegionID:    iamCtx.Region})
 	if e != nil {
-		return credential, ErrInvalidAccessKeyID
+		return credential, e
 	}
 	// Get signing key.
 	signingKey := getSigningKey(credential.SecretAccessKey, t, region)
@@ -213,7 +213,7 @@ func DoesPresignedSignatureMatchV4(r *http.Request,
 			NetworkType: iamCtx.NetWorkType,
 			RegionID:    iamCtx.Region})
 	if e != nil {
-		return credential, ErrInvalidAccessKeyID
+		return credential, e
 	}
 
 	if preSignValues.Expires > PresignedUrlExpireLimit {
@@ -282,7 +282,7 @@ func getCredentialUnverified(r *http.Request) (credential common.Credential, err
 			NetworkType: iamCtx.NetWorkType,
 			RegionID:    iamCtx.Region})
 	if e != nil {
-		return credential, ErrInvalidAccessKeyID
+		return credential, e
 	}
 
 	return credential, nil
@@ -364,7 +364,7 @@ func DoesSignatureMatchV4(hashedPayload string, r *http.Request,
 			NetworkType: iamCtx.NetWorkType,
 			RegionID:    iamCtx.Region})
 	if e != nil {
-		return credential, ErrInvalidAccessKeyID
+		return credential, e
 	}
 	// Get hmac signing key.
 	signingKey := getSigningKey(credential.SecretAccessKey, t, region)

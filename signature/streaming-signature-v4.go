@@ -108,7 +108,7 @@ func CalculateSeedSignature(r *http.Request) (credential common.Credential, sign
 			NetworkType: iamCtx.NetWorkType,
 			RegionID:    iamCtx.Region})
 	if e != nil {
-		return credential, "", "", time.Time{}, ErrInvalidAccessKeyID
+		return credential, "", "", time.Time{}, e
 	}
 
 	// Verify if region is valid.
