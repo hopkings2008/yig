@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -413,16 +414,22 @@ func (yig *YigStorage) ListBuckets(ctx context.Context, credential common.Creden
 	for _, bucketName := range bucketNames {
 		bucket, err := yig.MetaStorage.GetBucket(ctx, bucketName, true)
 		if err != nil {
-			// if bucketName cannot be found, must try to remove it from cache.
-			// also, user bucket cache must be refreshed again.
-			yig.MetaStorage.Cache.Remove(redis.BucketTable, meta.BUCKET_CACHE_PREFIX, bucketName)
-			gotInvalidBucket = 1
-			continue
+			if err == ErrNoSuchBucket {
+				// if bucketName cannot be found, must try to remove it from cache.
+				// also, user bucket cache must be refreshed again.
+				helper.Logger.Error(ctx, fmt.Sprintf("bucket %s doesn't exist in metastorage, remove it from cache", bucketName))
+				yig.MetaStorage.Cache.Remove(redis.BucketTable, meta.BUCKET_CACHE_PREFIX, bucketName)
+				gotInvalidBucket = 1
+				continue
+			}
+			helper.Logger.Error(ctx, fmt.Sprintf("failed to get bucket info for %s, err: %v", bucketName, err))
+			return buckets, err
 		}
 		buckets = append(buckets, bucket)
 	}
 	if gotInvalidBucket == 1 {
 		// refresh the user bucket cache.
+		helper.Logger.Info(ctx, fmt.Sprintf("refresh user bucket cache for user: %s", credential.UserId))
 		yig.MetaStorage.Cache.Remove(redis.UserTable, meta.BUCKET_CACHE_PREFIX, credential.UserId)
 	}
 	return buckets, nil
