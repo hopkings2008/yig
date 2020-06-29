@@ -403,19 +403,29 @@ func (yig *YigStorage) DeleteBucketWebsite(bucket *types.Bucket) error {
 	return nil
 }
 
-func (yig *YigStorage) ListBuckets(ctx context.Context, credential common.Credential) (buckets []*types.Bucket, err error) {
+func (yig *YigStorage) ListBuckets(ctx context.Context, credential common.Credential) ([]*types.Bucket, error) {
+	var buckets []*types.Bucket
 	bucketNames, err := yig.MetaStorage.GetUserBuckets(ctx, credential.UserId, true)
 	if err != nil {
-		return
+		return nil, err
 	}
+	gotInvalidBucket := 0
 	for _, bucketName := range bucketNames {
 		bucket, err := yig.MetaStorage.GetBucket(ctx, bucketName, true)
 		if err != nil {
-			return buckets, err
+			// if bucketName cannot be found, must try to remove it from cache.
+			// also, user bucket cache must be refreshed again.
+			yig.MetaStorage.Cache.Remove(redis.BucketTable, meta.BUCKET_CACHE_PREFIX, bucketName)
+			gotInvalidBucket = 1
+			continue
 		}
 		buckets = append(buckets, bucket)
 	}
-	return
+	if gotInvalidBucket == 1 {
+		// refresh the user bucket cache.
+		yig.MetaStorage.Cache.Remove(redis.UserTable, meta.BUCKET_CACHE_PREFIX, credential.UserId)
+	}
+	return buckets, nil
 }
 
 func (yig *YigStorage) DeleteBucket(ctx context.Context, bucketName string, credential common.Credential) (err error) {
