@@ -77,6 +77,9 @@ type Config struct {
 
 	// Message Bus
 	MsgBus MsgBusConfig `toml:"msg_bus"`
+
+	// IAM Cache expire time
+	IAMCacheExpireTime int `toml:"iam_cache_expire_time"`
 }
 
 type PluginConfig struct {
@@ -126,7 +129,9 @@ func MarshalTOMLConfig() error {
 			panic("Cannot open yig.toml")
 		}
 	}
-	var c Config
+	c := Config{
+		IAMCacheExpireTime: -1,
+	}
 	_, err = toml.Decode(string(data), &c)
 	if err != nil {
 		panic("load yig.toml error: " + err.Error())
@@ -198,5 +203,6 @@ func MarshalTOMLConfig() error {
 	CONFIG.MsgBus.MessageTimeoutMs = Ternary(c.MsgBus.MessageTimeoutMs == 0, 5000, c.MsgBus.MessageTimeoutMs).(int)
 	CONFIG.MsgBus.SendMaxRetries = Ternary(c.MsgBus.SendMaxRetries == 0, 2, c.MsgBus.SendMaxRetries).(int)
 
+	CONFIG.IAMCacheExpireTime = Ternary(c.IAMCacheExpireTime < 0, 600, c.IAMCacheExpireTime).(int)
 	return nil
 }

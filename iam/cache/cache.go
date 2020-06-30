@@ -4,12 +4,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/iam/common"
 )
 
 const (
-	CACHE_EXPIRE_TIME = 600 * time.Second
-	CACHE_CHECK_TIME  = 60 * time.Second
+	CACHE_CHECK_TIME = 60 * time.Second
 )
 
 type cacheEntry struct {
@@ -34,7 +34,7 @@ func cacheInvalidator() {
 		now := time.Now()
 		IamCache.lock.Lock()
 		for k, entry := range IamCache.cache {
-			if entry.createTime.Add(CACHE_EXPIRE_TIME).Before(now) {
+			if entry.createTime.Add(time.Duration(helper.CONFIG.IAMCacheExpireTime) * time.Second).Before(now) {
 				keysToExpire = append(keysToExpire, k)
 			}
 		}
@@ -58,6 +58,10 @@ func InitializeIamCache() {
 }
 
 func (c *cache) Get(credReq common.CredReq) (credential common.Credential, hit bool) {
+	if helper.CONFIG.IAMCacheExpireTime == 0 {
+		hit = false
+		return
+	}
 	c.lock.RLock()
 	key := credReq.CacheKey()
 	entry, hit := c.cache[key]
@@ -69,6 +73,9 @@ func (c *cache) Get(credReq common.CredReq) (credential common.Credential, hit b
 }
 
 func (c *cache) Set(credReq common.CredReq, credential common.Credential) {
+	if helper.CONFIG.IAMCacheExpireTime == 0 {
+		return
+	}
 	entry := cacheEntry{
 		createTime: time.Now(),
 		credential: credential,
