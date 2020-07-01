@@ -62,8 +62,14 @@ func generateIamCtxRequest(r *http.Request) *http.Request {
 		REQ_NETWORK_TYPE_EXTERN   = 2
 	)
 	networkType := REQ_NETWORK_TYPE_EXTERN
-	if strings.Contains(r.Host, helper.CONFIG.InternalDomain) {
-		networkType = REQ_NETWORK_TYPE_INTERNAL
+	if helper.CONFIG.InternalDomain != "" {
+		if strings.Contains(r.Host, helper.CONFIG.InternalDomain) {
+			networkType = REQ_NETWORK_TYPE_INTERNAL
+		}
+	} else {
+		if strings.Contains(r.Host, "internal") {
+			networkType = REQ_NETWORK_TYPE_INTERNAL
+		}
 	}
 
 	ctx := context.WithValue(r.Context(), common.IamContextKey, common.IamContext{
