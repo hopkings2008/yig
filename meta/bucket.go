@@ -107,12 +107,12 @@ func (m *Meta) UpdateBucketInfo(ctx context.Context, bucketName string, field st
 	tend := time.Now()
 	dur = tend.Sub(tinc)
 	if dur/1000000 >= 100 {
-		helper.Logger.Error(ctx, fmt.Sprintf("slow log: AddBucketInfoSyncEvent: bucket: %s, size: %d, takes: %d",
+		helper.Logger.Warn(ctx, fmt.Sprintf("slow log: AddBucketInfoSyncEvent: bucket: %s, size: %d, takes: %d",
 			bucketName, size, dur))
 	}
 	dur = tend.Sub(tstart)
 	if dur/1000000 >= 100 {
-		helper.Logger.Error(ctx, fmt.Sprintf("slow log: cache update, bucket: %s, size: %d, takes: %d",
+		helper.Logger.Warn(ctx, fmt.Sprintf("slow log: cache update, bucket: %s, size: %d, takes: %d",
 			bucketName, size, dur))
 	}
 	return nil

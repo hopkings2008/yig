@@ -158,7 +158,7 @@ func (cluster *CephStorage) doSmallPut(poolname string, oid string, data io.Read
 	tpool := time.Now()
 	dur := tpool.Sub(tstart).Nanoseconds() / 1000000
 	if dur >= 10 {
-		helper.Logger.Info(nil, fmt.Sprintf("slow log: doSmallPut OpenPool(%s, %s) spent %d", poolname, oid, dur))
+		helper.Logger.Warn(nil, fmt.Sprintf("slow log: doSmallPut OpenPool(%s, %s) spent %d", poolname, oid, dur))
 	}
 
 	buffer := cluster.BufPool.Get().(*bytes.Buffer)
@@ -175,7 +175,7 @@ func (cluster *CephStorage) doSmallPut(poolname string, oid string, data io.Read
 	tread := time.Now()
 	dur = tread.Sub(tpool).Nanoseconds() / 1000000
 	if dur >= 10 {
-		helper.Logger.Info(nil, fmt.Sprintf("slow log: doSmallPut read body(%s, %s) spent %d", poolname, oid, dur))
+		helper.Logger.Warn(nil, fmt.Sprintf("slow log: doSmallPut read body(%s, %s) spent %d", poolname, oid, dur))
 	}
 
 	err = pool.WriteSmallObject(oid, buffer.Bytes())
@@ -185,12 +185,12 @@ func (cluster *CephStorage) doSmallPut(poolname string, oid string, data io.Read
 	twrite := time.Now()
 	dur = twrite.Sub(tread).Nanoseconds() / 1000000
 	if dur >= 50 {
-		helper.Logger.Info(nil, fmt.Sprintf("slow log: doSmallPut ceph write(%s, %s) spent %d", poolname, oid, dur))
+		helper.Logger.Warn(nil, fmt.Sprintf("slow log: doSmallPut ceph write(%s, %s) spent %d", poolname, oid, dur))
 	}
 
 	dur = twrite.Sub(tstart).Nanoseconds() / 1000000
 	if dur >= 100 {
-		helper.Logger.Info(nil, fmt.Sprintf("slow log: doSmallPut fin(%s, %s) spent %d", poolname, oid, dur))
+		helper.Logger.Warn(nil, fmt.Sprintf("slow log: doSmallPut fin(%s, %s) spent %d", poolname, oid, dur))
 	}
 
 	return size, nil
@@ -286,7 +286,7 @@ func (cluster *CephStorage) Put(poolname string, oid string, data io.Reader) (si
 		tread := time.Now().Sub(start).Nanoseconds()
 		totalReadDur += tread
 		if tread/1000000 > 300 {
-			helper.Logger.Info(nil, fmt.Sprintf("slow log: ceph read %d from %s uses %d(ns)", count, oid, tread))
+			helper.Logger.Warn(nil, fmt.Sprintf("slow log: ceph read %d from %s uses %d(ns)", count, oid, tread))
 		}
 		if count == 0 {
 			break
@@ -355,7 +355,7 @@ func (cluster *CephStorage) Put(poolname string, oid string, data io.Reader) (si
 
 	size = int64(uint64(slice_offset) + offset)
 	if totalReadDur/1000000 > 300 {
-		helper.Logger.Info(nil, fmt.Sprintf("slow log: ceph read from client: it uses %d(ns) to read %d from %s",
+		helper.Logger.Warn(nil, fmt.Sprintf("slow log: ceph read from client: it uses %d(ns) to read %d from %s",
 			totalReadDur, size, oid))
 	}
 	//write all remaining data

@@ -47,7 +47,6 @@ type AccessLogHandler struct {
 }
 
 func (a AccessLogHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	tstart := time.Now()
 	a.responseRecorder = NewResponseRecorder(w)
 
 	startTime := time.Now()
@@ -66,13 +65,14 @@ func (a AccessLogHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	response := newReplacer.Replace(a.format)
 
 	helper.AccessLogger.Println(response)
+	tstart := time.Now()
 	// send the entrys in access logger to message bus.
 	elems := newReplacer.GetReplacedValues()
 	a.notify(elems)
 	tend := time.Now()
 	dur := tend.Sub(tstart).Nanoseconds() / 1000000
 	if dur >= 100 {
-		helper.Logger.Warn(r.Context(), "slow log: access_log_handler(", response, ") spent %d", dur)
+		helper.Logger.Warn(r.Context(), fmt.Sprintf("slow log: access_log_handler_notify(%s) spent total %d", response, dur))
 	}
 }
 

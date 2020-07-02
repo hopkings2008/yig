@@ -563,7 +563,7 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 	cend := time.Now()
 	cdur := cend.Sub(cstart)
 	if cdur/1000000 >= 300 {
-		helper.Logger.Info(ctx, fmt.Sprintf("slow log: ceph put: bucket: %s, object: %s, size: %d, takes: %d",
+		helper.Logger.Warn(ctx, fmt.Sprintf("slow log: ceph put: bucket: %s, object: %s, size: %d, takes: %d",
 			bucketName, objectName, size, cdur))
 	}
 	// Should metadata update failed, add `maybeObjectToRecycle` to `RecycleQueue`,
@@ -642,7 +642,7 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 	tend := time.Now()
 	dur := tend.Sub(tstart)
 	if dur/1000000 >= 1000 {
-		helper.Logger.Info(ctx, fmt.Sprintf("slow log: PutOject: object: %s, bucket: %s, size: %d, takes: %d",
+		helper.Logger.Warn(ctx, fmt.Sprintf("slow log: PutOject: object: %s, bucket: %s, size: %d, takes: %d",
 			bucketName, objectName, object.Size, dur))
 	}
 	return result, nil

@@ -124,14 +124,14 @@ func (m *Meta) PutObject(ctx context.Context, object *Object, multipart *Multipa
 		uend := time.Now()
 		dur := uend.Sub(ustart)
 		if dur/1000000 >= 100 {
-			helper.Logger.Info(ctx, fmt.Sprintf("slow log: UpdateUsage, bucket %s, obj: %s, size: %d, takes %d",
+			helper.Logger.Warn(ctx, fmt.Sprintf("slow log: UpdateUsage, bucket %s, obj: %s, size: %d, takes %d",
 				object.BucketName, object.Name, object.Size, dur))
 		}
 	}
 	tend := time.Now()
 	dur := tend.Sub(tstart)
 	if dur/1000000 >= 100 {
-		helper.Logger.Info(ctx, fmt.Sprintf("slow log: MetaPutObject: bucket: %s, obj: %s, size: %d, takes %d",
+		helper.Logger.Warn(ctx, fmt.Sprintf("slow log: MetaPutObject: bucket: %s, obj: %s, size: %d, takes %d",
 			object.BucketName, object.Name, object.Size, dur))
 	}
 	return nil

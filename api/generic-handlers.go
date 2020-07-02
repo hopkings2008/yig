@@ -63,47 +63,47 @@ type corsHandler struct {
 }
 
 func setCORSResponseHeader(w http.ResponseWriter, r *http.Request) {
-    origin := r.Header.Get("Origin")
+	origin := r.Header.Get("Origin")
 
-    ctx := getRequestContext(r)
-    bucket := ctx.BucketInfo
+	ctx := getRequestContext(r)
+	bucket := ctx.BucketInfo
 
-    if origin != "" && InReservedOrigins(origin) {
-        w.Header().Set("Access-Control-Allow-Origin", origin)
-        w.Header().Set("Access-Control-Allow-Headers", "*")
-        w.Header().Set("Access-Control-Allow-Methods", "*")
-        w.Header().Set("Access-Control-Expose-Headers", strings.Join(CommonS3ResponseHeaders, ","))
-    } else {
-        if bucket != nil {
-            for _, rule := range bucket.CORS.CorsRules {
-                if rule.OriginMatched(origin) {
-                    rule.SetResponseHeaders(w, r)
-                    break
-                }
-            }
-        }
-    }
+	if origin != "" && InReservedOrigins(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+		w.Header().Set("Access-Control-Expose-Headers", strings.Join(CommonS3ResponseHeaders, ","))
+	} else {
+		if bucket != nil {
+			for _, rule := range bucket.CORS.CorsRules {
+				if rule.OriginMatched(origin) {
+					rule.SetResponseHeaders(w, r)
+					break
+				}
+			}
+		}
+	}
 }
 
 func (h corsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    w.Header().Add("Vary", "Origin")
-    origin := r.Header.Get("Origin")
+	w.Header().Add("Vary", "Origin")
+	origin := r.Header.Get("Origin")
 
-    if r.Method == "OPTIONS" {
-        if origin == "" || r.Header.Get("Access-Control-Request-Method") == "" {
-            WriteErrorResponse(w, r, ErrInvalidHeader)
-            return
-        }
-        setCORSResponseHeader(w, r)
-        WriteSuccessResponse(w, nil)
-        return
-    }
+	if r.Method == "OPTIONS" {
+		if origin == "" || r.Header.Get("Access-Control-Request-Method") == "" {
+			WriteErrorResponse(w, r, ErrInvalidHeader)
+			return
+		}
+		setCORSResponseHeader(w, r)
+		WriteSuccessResponse(w, nil)
+		return
+	}
 
-    // other methods
-    setCORSResponseHeader(w, r)
+	// other methods
+	setCORSResponseHeader(w, r)
 
-    h.handler.ServeHTTP(w, r)
-    return
+	h.handler.ServeHTTP(w, r)
+	return
 }
 
 // setCorsHandler handler for CORS (Cross Origin Resource Sharing)
@@ -154,7 +154,7 @@ func (h resourceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tend := time.Now()
 	dur := tend.Sub(tstart).Nanoseconds() / 1000000
 	if dur >= 100 {
-		helper.Logger.Info(r.Context(), fmt.Sprintf("slow log resouce_handler(%s, %s) spent %d", bucketName, objectName, dur))
+		helper.Logger.Warn(r.Context(), fmt.Sprintf("slow log resouce_handler(%s, %s) spent %d", bucketName, objectName, dur))
 	}
 }
 
@@ -247,7 +247,7 @@ func (h GenerateContextHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	tend := time.Now()
 	dur := tend.Sub(tstart).Nanoseconds() / 1000000
 	if dur >= 100 {
-		helper.Logger.Info(ctx, fmt.Sprintf("slow log: generic_context(%s, %s) spent %d", bucketName, objectName, dur))
+		helper.Logger.Warn(ctx, fmt.Sprintf("slow log: generic_context(%s, %s) spent %d", bucketName, objectName, dur))
 	}
 
 }
