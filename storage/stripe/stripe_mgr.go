@@ -73,7 +73,8 @@ func (sm *StripeMgr) GetObjectIds(prefix string, length int64) []string {
 
 /*
 * whenever read or write, offset should be the multiple of strip unit.
-* Note: caller should compare and use ObjectStoreInfo.Length with length in parameter.
+* Note: the returned Length in ObjectStoreInfo is not larger than length.
+* ObjectStoreInfo.Length <= length
 * the size of last object may not be full.
  */
 func (sm *StripeMgr) GetObjectStoreInfo(offset int64, length int64) ObjectStoreInfo {
@@ -85,7 +86,7 @@ func (sm *StripeMgr) GetObjectStoreInfo(offset int64, length int64) ObjectStoreI
 
 	// remain bytes in the stripe unit.
 	// the size of remain bytes is smaller than the size of stripe unit.
-	unitRemain := remain % int64(sm.stripeUnit)
+	unitOffset := remain % int64(sm.stripeUnit)
 	// object id in the stripe
 	objectId := int(remain / int64(sm.stripeUnit))
 
@@ -95,15 +96,20 @@ func (sm *StripeMgr) GetObjectStoreInfo(offset int64, length int64) ObjectStoreI
 	stripeRemainId := int(stripeId % int64(sm.objStripeCount))
 
 	// offset in the specified object.
-	objOffset := int64(stripeRemainId*sm.stripeUnit) + unitRemain
+	objOffset := int64(stripeRemainId*sm.stripeUnit) + unitOffset
 	// available bytes in this object stripe unit.
-	objUnitRemain := int64(sm.stripeUnit) - unitRemain
+	unitRemain := int64(sm.stripeUnit) - unitOffset
 	osi := ObjectStoreInfo{
 		ObjGroupId: objectGroupId,
 		ObjectId:   objectId,
 		StripeId:   stripeId,
 		Offset:     objOffset,
-		Length:     objUnitRemain,
+		Length:     unitRemain,
+	}
+
+	// set the available buffer size according to length.
+	if osi.Length > length {
+		osi.Length = length
 	}
 
 	return osi

@@ -18,7 +18,7 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 	// value: array of stripe unit
 	testLens := make(map[int64][]stripeInfo)
 
-	// test 1M. only one object id.
+	// test 1M.
 	fileSize := int64(1<<20) + 1
 	for i := 1; i <= 2048; i++ {
 		unitSize := i << 10
@@ -32,7 +32,92 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 			})
 		}
 	}
+	// test 2M
+	fileSize = int64(2<<20) + 1
+	for i := 1; i <= 4096; i++ {
+		unitSize := i << 10
+		objSize := 4 << 20
+		// testSize is larger than unitSize and can be divided by unitSize.
+		if objSize > unitSize && (objSize%unitSize) == 0 {
+			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+				ObjectSize: objSize,
+				StripeUnit: i << 10,
+				StripeNum:  5,
+			})
+		}
+	}
+	// test 2M with 1M object size
+	fileSize = int64(2<<20) + 1
+	for i := 1; i <= 1024; i++ {
+		unitSize := i << 10
+		objSize := 1 << 20
+		// testSize is larger than unitSize and can be divided by unitSize.
+		if objSize > unitSize && (objSize%unitSize) == 0 {
+			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+				ObjectSize: objSize,
+				StripeUnit: i << 10,
+				StripeNum:  5,
+			})
+		}
+	}
+	// test 4M
+	fileSize = int64(4<<20) + 1
+	for i := 1; i <= 4096; i++ {
+		unitSize := i << 10
+		objSize := 4 << 20
+		// testSize is larger than unitSize and can be divided by unitSize.
+		if objSize > unitSize && (objSize%unitSize) == 0 {
+			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+				ObjectSize: objSize,
+				StripeUnit: i << 10,
+				StripeNum:  5,
+			})
+		}
+	}
+	// test 32M.
 	fileSize = int64(32<<20) + 1
+	for i := 1; i <= 8192; i++ {
+		unitSize := i << 10
+		objSize := 8 << 20
+		// testSize is larger than unitSize and can be divided by unitSize.
+		if objSize > unitSize && (objSize%unitSize) == 0 {
+			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+				ObjectSize: objSize,
+				StripeUnit: i << 10,
+				StripeNum:  5,
+			})
+		}
+	}
+	// test 128M
+	fileSize = int64(128<<20) + 1
+	for i := 1; i <= 8192; i++ {
+		unitSize := i << 10
+		objSize := 8 << 20
+		// testSize is larger than unitSize and can be divided by unitSize.
+		if objSize > unitSize && (objSize%unitSize) == 0 {
+			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+				ObjectSize: objSize,
+				StripeUnit: i << 10,
+				StripeNum:  5,
+			})
+		}
+	}
+	// test 256M
+	fileSize = int64(256<<20) + 1
+	for i := 1; i <= 8192; i++ {
+		unitSize := i << 10
+		objSize := 8 << 20
+		// testSize is larger than unitSize and can be divided by unitSize.
+		if objSize > unitSize && (objSize%unitSize) == 0 {
+			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+				ObjectSize: objSize,
+				StripeUnit: i << 10,
+				StripeNum:  5,
+			})
+		}
+	}
+	// test 512M
+	fileSize = int64(512<<20) + 1
 	for i := 1; i <= 8192; i++ {
 		unitSize := i << 10
 		objSize := 8 << 20
@@ -52,6 +137,20 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 	}
 }
 
+func (ss *StripeSuite) BenchmarkGetObjectStoreInfo128M(c *C) {
+	sm, err := stripe.NewStripeMgr(8<<20, 4<<20, 5)
+	c.Assert(err, Equals, nil)
+	for i := 0; i < c.N; i++ {
+		length := int64(128 << 20)
+		offset := int64(0)
+		for length > 0 {
+			oi := sm.GetObjectStoreInfo(offset, length)
+			length -= oi.Length
+			offset += oi.Length
+		}
+	}
+}
+
 func (ss *StripeSuite) verify(objectSize int64, si stripeInfo, c *C) {
 	sm, err := stripe.NewStripeMgr(si.ObjectSize, si.StripeUnit, si.StripeNum)
 	c.Assert(err, Equals, nil)
@@ -61,19 +160,17 @@ func (ss *StripeSuite) verify(objectSize int64, si stripeInfo, c *C) {
 	// key: objectGroupId_objectId
 	// value: array of ObjectStoreInfo
 	infos := make(map[string][]stripe.ObjectStoreInfo)
+	// during below loop, all the ObjectStoreInfo in []stripe.ObjectStoreInfo are ordered ascendly.
 	for length > 0 {
 		oi := sm.GetObjectStoreInfo(offset, length)
 		key := fmt.Sprintf("%d_%d", oi.ObjGroupId, oi.ObjectId)
 		//c.Logf("key: %s, offset: %d, length: %d\n", key, offset, length)
 		infos[key] = append(infos[key], oi)
-		if length > oi.Length {
-			length -= oi.Length
-			offset += oi.Length
-		} else {
-			length -= length
-			offset += length
-		}
+		length -= oi.Length
+		offset += oi.Length
 	}
+	//verify that offset should be equal to the objectSize.
+	c.Assert(offset, Equals, objectSize)
 
 	// get object id list.
 	ids := sm.GetObjectIdList(objectSize)
@@ -104,4 +201,20 @@ func (ss *StripeSuite) verify(objectSize int64, si stripeInfo, c *C) {
 			c.Assert(ok, Equals, true)
 		}
 	}
+	// verify that in each object in infos, the offset are not overlapped
+	totalLength := int64(0)
+	for k, v := range infos {
+		offset = int64(0)
+		for _, oi := range v {
+			key := fmt.Sprintf("%d_%d", oi.ObjGroupId, oi.ObjectId)
+			c.Assert(key, Equals, k)
+			//verify that the offset is the previous offset + length.
+			c.Assert(offset, Equals, oi.Offset)
+			offset += oi.Length
+			totalLength += oi.Length
+		}
+		//verify that last offset should be equal to or less than the si.ObjectSize.
+		c.Assert(offset <= int64(si.ObjectSize), Equals, true)
+	}
+	c.Assert(totalLength, Equals, objectSize)
 }
