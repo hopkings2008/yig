@@ -180,6 +180,10 @@ func (sm *StripeMgr) PutBuf(buf []byte) {
 }
 
 func NewStripeMgr(objSize int, stripeUnit int, stripeNum int) (*StripeMgr, error) {
+	if objSize <= 0 || stripeUnit <= 0 || stripeNum <= 0 {
+		return nil, errors.New(fmt.Sprintf("invalid parameter, objSize(%d), stripeUnit(%d), stripeNum(%d)",
+			objSize, stripeUnit, stripeNum))
+	}
 	// object size must not be smaller than stripe unit size.
 	if objSize < stripeUnit {
 		return nil, errors.New(fmt.Sprintf("invalid parameter, stripeUnit(%d) > objSize(%d)",
