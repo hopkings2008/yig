@@ -194,6 +194,8 @@ github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/ugorji/go v1.1.4 h1:j4s+tAvLfL3bZyefP2SEWmhBzmuIlH/eqNuPdFPgngw=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
+github.com/woclouds3/radoshttpd v0.0.0-20200707013832-cb721adad20a h1:/jRkeRi2jOwznOD5GKKPw4LITMdSAc+emkQ47FpXHAU=
+github.com/woclouds3/radoshttpd v0.0.0-20200707013832-cb721adad20a/go.mod h1:vcjihyz9uI55fPd3CqbQ+3gVO2SQfU+yZ9YWqP4WlFE=
 github.com/xxtea/xxtea-go v0.0.0-20170828040851-35c4b17eecf6 h1:S+0oS/OPAe0kdSpQ7GAnCmpcDL7Jh2iJMjZTV6mYbPo=
 github.com/xxtea/xxtea-go v0.0.0-20170828040851-35c4b17eecf6/go.mod h1:2uvuCBt0VXxijrX5ieiAeeNT2+2MIsrs1DI9iXz7OOQ=
 go.opencensus.io v0.20.1/go.mod h1:6WKK9ahsWS3RSO+PY9ZHZUfv2irvY6gN279GOPZjmmk=

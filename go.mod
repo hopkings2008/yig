@@ -44,6 +44,7 @@ require (
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/ugorji/go v1.1.4
+	github.com/woclouds3/radoshttpd v0.0.0-20200707013832-cb721adad20a
 	github.com/xxtea/xxtea-go v0.0.0-20170828040851-35c4b17eecf6
 	golang.org/x/crypto v0.0.0-20190325154230-a5d413f7728c // indirect
 	gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405
