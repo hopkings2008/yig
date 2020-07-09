@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/woclouds3/radoshttpd/rados"
 	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/log"
+	"github.com/woclouds3/radoshttpd/rados"
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 	AIO_CONCURRENT      = 4
 )
 
-type CephStorage struct {
+type CephNativeStripe struct {
 	Name       string
 	Conn       *rados.Conn
 	InstanceId uint64
