@@ -23,7 +23,7 @@ func (t *TidbClient) GetObject(bucketName, objectName, version string) (object *
 
 	sqltext = "select bucketname,name,version,location,pool,ownerid,size,objectid," +
 		"lastmodifiedtime,etag,contenttype,customattributes,acl,nullversion," +
-		"deletemarker,ssetype,encryptionkey,initializationvector,type,storageclass,islatest from objects"
+		"deletemarker,ssetype,encryptionkey,initializationvector,type,storageclass,islatest,meta from objects"
 	if version == "" {
 		// TODO should add islatest here?
 		sqltext += " where bucketname=? and name=? order by bucketname,name,version limit 1;"
@@ -62,6 +62,7 @@ func (t *TidbClient) GetObject(bucketName, objectName, version string) (object *
 		&object.Type,
 		&object.StorageClass,
 		&object.IsLatest,
+		&object.Meta,
 	)
 	if err == sql.ErrNoRows {
 		err = ErrNoSuchKey
@@ -261,7 +262,7 @@ func (t *TidbClient) DeleteObject(object *Object, tx interface{}) (err error) {
 //util function
 func getParts(bucketName, objectName string, version uint64, cli *sql.DB) (parts map[int]*Part, err error) {
 	parts = make(map[int]*Part)
-	sqltext := "select partnumber,size,objectid,offset,etag,lastmodified,initializationvector from objectpart where bucketname=? and objectname=? and version=?;"
+	sqltext := "select partnumber,size,objectid,offset,etag,lastmodified,initializationvector,meta from objectpart where bucketname=? and objectname=? and version=?;"
 	rows, err := cli.Query(sqltext, bucketName, objectName, version)
 	if err != nil {
 		return
@@ -277,6 +278,7 @@ func getParts(bucketName, objectName string, version uint64, cli *sql.DB) (parts
 			&p.Etag,
 			&p.LastModified,
 			&p.InitializationVector,
+			&p.Meta,
 		)
 		parts[p.PartNumber] = p
 	}

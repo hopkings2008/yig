@@ -26,6 +26,7 @@ type Part struct {
 	Etag                 string
 	LastModified         string // time string of format "2006-01-02T15:04:05.000Z"
 	InitializationVector []byte
+	Meta                 string // object storage meta.
 }
 
 // For scenario only one part is needed to insert
@@ -148,15 +149,15 @@ func valuesForParts(parts map[int]*Part) (values map[string][]byte, err error) {
 }
 
 func (p *Part) GetCreateSql(bucketname, objectname, version string) (string, []interface{}) {
-	sql := "insert into objectpart(partnumber,size,objectid,offset,etag,lastmodified,initializationvector,bucketname,objectname,version) " +
-		"values(?,?,?,?,?,?,?,?,?,?)"
-	args := []interface{}{p.PartNumber, p.Size, p.ObjectId, p.Offset, p.Etag, p.LastModified, p.InitializationVector, bucketname, objectname, version}
+	sql := "insert into objectpart(partnumber,size,objectid,offset,etag,lastmodified,initializationvector,bucketname,objectname,version,meta) " +
+		"values(?,?,?,?,?,?,?,?,?,?,?)"
+	args := []interface{}{p.PartNumber, p.Size, p.ObjectId, p.Offset, p.Etag, p.LastModified, p.InitializationVector, bucketname, objectname, version, p.Meta}
 	return sql, args
 }
 
 func (p *Part) GetCreateGcSql(bucketname, objectname string, version uint64) (string, []interface{}) {
-	sql := "insert into gcpart(partnumber,size,objectid,offset,etag,lastmodified,initializationvector,bucketname,objectname,version) " +
-		"values(?,?,?,?,?,?,?,?,?,?)"
-	args := []interface{}{p.PartNumber, p.Size, p.ObjectId, p.Offset, p.Etag, p.LastModified, p.InitializationVector, bucketname, objectname, version}
+	sql := "insert into gcpart(partnumber,size,objectid,offset,etag,lastmodified,initializationvector,bucketname,objectname,version,meta) " +
+		"values(?,?,?,?,?,?,?,?,?,?,?,?)"
+	args := []interface{}{p.PartNumber, p.Size, p.ObjectId, p.Offset, p.Etag, p.LastModified, p.InitializationVector, bucketname, objectname, version, p.Meta}
 	return sql, args
 }

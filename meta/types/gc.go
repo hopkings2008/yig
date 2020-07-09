@@ -18,6 +18,7 @@ type GarbageCollection struct {
 	MTime      time.Time // last modify time of status
 	Parts      map[int]*Part
 	TriedTimes int
+	Meta       string // object storage meta.
 }
 
 func (gc GarbageCollection) GetValues() (values map[string]map[string][]byte, err error) {
@@ -29,6 +30,7 @@ func (gc GarbageCollection) GetValues() (values map[string]map[string][]byte, er
 			"status":   []byte(gc.Status),
 			"mtime":    []byte(gc.MTime.Format(CREATE_TIME_LAYOUT)),
 			"tried":    []byte(strconv.Itoa(gc.TriedTimes)),
+			"meta":     []byte(gc.Meta),
 		},
 	}
 	if len(gc.Parts) != 0 {
