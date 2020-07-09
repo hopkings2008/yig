@@ -70,7 +70,7 @@ func (t *TidbClient) GetMultipart(bucketName, objectName, uploadId string) (mult
 		return
 	}
 
-	sqltext = "select partnumber,size,objectid,offset,etag,lastmodified,initializationvector from multipartpart where bucketname=? and objectname=? and uploadtime=?;"
+	sqltext = "select partnumber,size,objectid,offset,etag,lastmodified,initializationvector,meta from multipartpart where bucketname=? and objectname=? and uploadtime=?;"
 	rows, err := t.Client.Query(sqltext, bucketName, objectName, uploadTime)
 	if err != nil {
 		return
@@ -86,6 +86,7 @@ func (t *TidbClient) GetMultipart(bucketName, objectName, uploadId string) (mult
 			&p.Etag,
 			&p.LastModified,
 			&p.InitializationVector,
+			&p.Meta,
 		)
 		ts, e := time.Parse(TIME_LAYOUT_TIDB, p.LastModified)
 		if e != nil {

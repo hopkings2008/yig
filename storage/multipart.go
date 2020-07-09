@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"net/url"
 	"sort"
@@ -493,11 +494,15 @@ func (yig *YigStorage) AbortMultipartUpload(ctx context.Context, credential comm
 
 	multipart, err := yig.MetaStorage.GetMultipart(bucketName, objectName, uploadId)
 	if err != nil {
+		helper.Logger.Error(ctx, fmt.Sprintf("failed to get multpart for(%s/%s, %s), err: %v"),
+			bucketName, objectName, uploadId, err)
 		return err
 	}
 
 	err = yig.MetaStorage.DeleteMultipart(ctx, multipart)
 	if err != nil {
+		helper.Logger.Error(ctx, fmt.Sprintf("failed to delete multipart meta for(%s/%s, %s), err: %v",
+			bucketName, objectName, uploadId, err))
 		return err
 	}
 	// remove parts in Ceph
