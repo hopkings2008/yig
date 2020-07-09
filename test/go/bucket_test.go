@@ -1,6 +1,10 @@
 package _go
 
 import (
+	"fmt"
+	"reflect"
+	"sort"
+	"strconv"
 	"testing"
 
 	. "github.com/journeymidnight/yig/test/go/lib"
@@ -40,7 +44,6 @@ func Test_DeleteBucket(t *testing.T) {
 	t.Log("DeleteBucket Success.")
 }
 
-/*
 func Test_ListObjectVersionsWithMaxKey(t *testing.T) {
 	sc := NewS3()
 	err := sc.MakeBucket(TEST_BUCKET)
@@ -80,11 +83,12 @@ func Test_ListObjectVersionsWithMaxKey(t *testing.T) {
 		var result *[][]string
 		var isTruncated bool
 
-		result, isTruncated, keyMarker, versionIdMarker, err = sc.ListObjectVersions(TEST_BUCKET, keyMarker, versionIdMarker, maxKeys)
+		result, _, isTruncated, keyMarker, versionIdMarker, err = sc.ListObjectVersions(TEST_BUCKET, keyMarker, versionIdMarker, "", "", maxKeys)
 		if err != nil {
 			t.Fatal("ListObjectVersions err:", err)
 			panic(err)
 		}
+		t.Log(isTruncated, keyMarker, versionIdMarker)
 
 		resultList = append(resultList, (*result)...)
 
@@ -94,7 +98,7 @@ func Test_ListObjectVersionsWithMaxKey(t *testing.T) {
 	}
 
 	if len(expectedList) != len(resultList) {
-		t.Fatal("resultList:", resultList)
+		t.Fatal("resultList:", resultList, "expectedList:", expectedList)
 		panic("")
 	}
 
@@ -107,7 +111,225 @@ func Test_ListObjectVersionsWithMaxKey(t *testing.T) {
 
 	t.Log("ListObjectVersions Success.")
 }
-*/
+
+// ListObjects and ListObjectVersions with Delimiter.
+func Test_ListObjectVersionsWithDelimiter(t *testing.T) {
+	sc := NewS3()
+
+	// 2 dir * 2 object * 2 versions + 1 object * 2 versions, maxKeys 1000, delimiter ""
+	ListObjectVersionsWithDelimiterHelper(t, sc, 2, 2, 2, 1, 2, 1000, "")
+	ListObjectVersionsWithDelimiterHelper(t, sc, 3, 2, 4, 1, 2, 3, "")
+
+	ListObjectVersionsWithDelimiterHelper(t, sc, 2, 2, 2, 1, 2, 1000, "/")
+	ListObjectVersionsWithDelimiterHelper(t, sc, 3, 4, 2, 1, 2, 3, "/")
+	ListObjectVersionsWithDelimiterHelper(t, sc, 3, 2, 4, 2, 2, 3, "/")
+
+	// 2 dir * 9 object * 300 versions + 1 object * 3 versions, maxKeys 1000, delimiter "".
+	// ListObjectVersionsWithDelimiterHelper(t, sc, 2, 9, 300, 1, 3, 1000, "/")
+	// 1001 dir * 9 object * 300 versions + 2 object * 3 versions, maxKeys 1000, delimiter "".
+	// ListObjectVersionsWithDelimiterHelper(t, sc, 1001, 2, 2, 2, 3, 1000, "/")
+
+	t.Log("All TC passed!")
+}
+
+func ListObjectVersionsWithDelimiterHelper(t *testing.T, sc *S3Client, dirNum, dirObjNum, dirObjVersionNum, objNum, versionNum, maxKeys int, delimiter string) {
+	t.Log("TC: dir:", dirNum, "obj in it:", dirObjNum, "*", dirObjVersionNum, ", object:", objNum, "*", versionNum, ", maxKeys:", maxKeys, "delimiter:", delimiter)
+
+	failed := false
+
+	err := sc.MakeBucket(TEST_BUCKET)
+	if err != nil {
+		t.Fatal("MakeBucket err:", err)
+	}
+	defer sc.DeleteBucket(TEST_BUCKET)
+
+	if err = sc.PutBucketVersioning(TEST_BUCKET, "Enabled"); err != nil {
+		t.Fatal("PutBucketVersioning err :", err)
+	}
+
+	// All the dir and objects created.
+	expectedDirList := []string{}
+	expectedDirObjectList := map[string]([]string){}
+	expectedObjectList := []string{} // Key without "/".
+
+	// All the versions created, map[versionId]key .
+	expectedVersionKeyMap := map[string]string{}
+	defer func() {
+		// Delete all the versions.
+		if failed {
+			return
+		}
+		for versionId, key := range expectedVersionKeyMap {
+			if err := sc.DeleteObjectVersion(TEST_BUCKET, key, versionId); err != nil {
+				t.Log("Deletion failed!", key, versionId)
+			}
+		}
+		fmt.Println("Deleted all the objects!")
+	}()
+
+	// Create dir * objects * versions, + objNum objects
+	for i := 0; i < dirNum; i++ {
+		dirName := "dir" + strconv.Itoa(i) + "/"
+		expectedKeyList := []string{}
+
+		for j := 0; j < dirObjNum; j++ {
+			key := dirName + TEST_KEY + strconv.Itoa(j)
+			for k := 0; k < dirObjVersionNum; k++ {
+				versionId, err := sc.PutObjectVersioning(TEST_BUCKET, key, TEST_VALUE)
+				if err != nil {
+					t.Fatal("PutBucketVersioning faile for:", TEST_BUCKET, key)
+				}
+				expectedVersionKeyMap[versionId] = key
+			}
+			expectedKeyList = append(expectedKeyList, key)
+		}
+
+		expectedDirList = append(expectedDirList, dirName)
+		sort.Strings(expectedKeyList)
+		expectedDirObjectList[dirName] = expectedKeyList
+	}
+
+	for i := dirNum; i < (dirNum + objNum); i++ {
+		key := "dir" + strconv.Itoa(i)
+		for j := 0; j < versionNum; j++ {
+			versionId, err := sc.PutObjectVersioning(TEST_BUCKET, key, TEST_VALUE)
+			if err != nil {
+				t.Fatal("PutBucketVersioning failed for:", TEST_BUCKET, key)
+			}
+			expectedVersionKeyMap[versionId] = key
+		}
+
+		expectedObjectList = append(expectedObjectList, key)
+	}
+
+	t.Log("PubObjects Succeeded!")
+	fmt.Println("PubObjects Succeeded!")
+	sort.Strings(expectedDirList)
+	sort.Strings(expectedObjectList)
+
+	// Get result.
+	dirList := []string{}
+	dirObjectList := map[string]([]string){}
+	objectList := []string{}
+
+	// ListObjects in first level, dir0/ to dirN/, and objects with key "dirX".
+	for keyMarker, keyList, commonPrefixes, isTruncated := "", &[]string{}, &[]string{}, true; isTruncated; {
+		var err error
+		keyMarker, keyList, commonPrefixes, isTruncated, err = sc.ListObjectsWithMarker(TEST_BUCKET, keyMarker, "", delimiter, int64(maxKeys))
+		if err != nil {
+			t.Fatal("ListObjects failed 1 for:", TEST_BUCKET, keyMarker, delimiter, maxKeys)
+		}
+
+		dirList = append(dirList, (*commonPrefixes)...)
+		objectList = append(objectList, (*keyList)...)
+	}
+
+	// ListObjects in dirX
+	for _, commonPrefix := range dirList {
+		for keyMarker, keyList, commonPrefixes, isTruncated := commonPrefix, &[]string{}, &[]string{}, true; isTruncated; {
+			var err error
+			keyMarker, keyList, commonPrefixes, isTruncated, err = sc.ListObjectsWithMarker(TEST_BUCKET, keyMarker, commonPrefix, delimiter, int64(maxKeys))
+			if err != nil || len(*commonPrefixes) != 0 {
+				t.Fatal("ListObjects failed 2 for:", TEST_BUCKET, keyMarker, commonPrefix, err, commonPrefixes)
+			}
+
+			dirObjectList[commonPrefix] = append(dirObjectList[commonPrefix], (*keyList)...)
+		}
+	}
+
+	// Verify ListObjects result.
+	if delimiter != "" {
+		if !reflect.DeepEqual(expectedDirList, dirList) {
+			t.Fatal("DirList not match:", dirList, "expected:", expectedDirList)
+		}
+		for dirName, expectedKeyList := range expectedDirObjectList {
+			keyList, ok := dirObjectList[dirName]
+			if !ok {
+				t.Fatal("No keyList for dir:", dirName, len(expectedKeyList))
+			}
+			if !reflect.DeepEqual(expectedKeyList, keyList) {
+				t.Fatal("KeyList not equal:", dirName, len(expectedKeyList), len(keyList))
+			}
+		}
+		if !reflect.DeepEqual(expectedObjectList, objectList) {
+			t.Fatal("ObjectList not match:", objectList, "expected:", expectedObjectList)
+		}
+	} else {
+		allExpectedObjectList := []string{}
+		for _, keyList := range expectedDirObjectList {
+			allExpectedObjectList = append(allExpectedObjectList, keyList...)
+		}
+		allExpectedObjectList = append(allExpectedObjectList, expectedObjectList...)
+
+		if !reflect.DeepEqual(allExpectedObjectList, objectList) {
+			t.Fatal("ObjectList not match:", objectList, "expected:", allExpectedObjectList)
+		}
+	}
+
+	t.Log("ListObjects Succeeded!")
+
+	// ListObjectVersions, Get dir0/ to dirN/, object dirX.
+	versionedDirList := []string{}
+	versionKeyMap := map[string]string{}
+	for keyVersionList, dirList, isTruncated, keyMarker, versionIdMarker := &[][]string{}, &[]string{}, true, "", ""; isTruncated; {
+		var err error
+		keyVersionList, dirList, isTruncated, keyMarker, versionIdMarker, err = sc.ListObjectVersions(TEST_BUCKET, keyMarker, versionIdMarker, "", delimiter, int64(maxKeys))
+		if err != nil {
+			t.Fatal("ListObjectVersions err:", err)
+			panic(err)
+		}
+
+		versionedDirList = append(versionedDirList, (*dirList)...)
+
+		// objNum * versionNum, "dirX" files.
+		for _, keyVersion := range *keyVersionList {
+			key := keyVersion[0]
+			versionId := keyVersion[1]
+			versionKeyMap[versionId] = key
+		}
+
+		// t.Log("versionKeyMap len1:", len(versionKeyMap))
+	}
+
+	// ListObjectVersions in dirN/
+	for _, commonPrefix := range versionedDirList {
+		for keyVersionList, dirList, isTruncated, keyMarker, versionIdMarker := &[][]string{}, &[]string{}, true, commonPrefix, ""; isTruncated; {
+			var err error
+			keyVersionList, dirList, isTruncated, keyMarker, versionIdMarker, err = sc.ListObjectVersions(TEST_BUCKET, keyMarker, versionIdMarker, commonPrefix, delimiter, int64(maxKeys))
+			if err != nil || len(*dirList) != 0 {
+				t.Fatal("ListObjectVersions failed for:", TEST_BUCKET, keyMarker, versionIdMarker, commonPrefix, delimiter, maxKeys)
+			}
+
+			// dir[i]/testput[j]
+			for _, keyVersion := range *keyVersionList {
+				key := keyVersion[0]
+				versionId := keyVersion[1]
+				versionKeyMap[versionId] = key
+			}
+
+			// t.Log("versionKeyMap", commonPrefix, keyMarker, "len:", len(versionKeyMap))
+		}
+		// t.Log("versionKeyMap", commonPrefix, "len:", len(versionKeyMap))
+	}
+
+	// Verify ListObjectVersions.
+	if delimiter != "" {
+		if !reflect.DeepEqual(expectedDirList, versionedDirList) {
+			t.Fatal("ListObjectVersions returned dir not match!")
+		}
+	}
+
+	if !reflect.DeepEqual(expectedVersionKeyMap, versionKeyMap) {
+		failed = true
+		if len(versionKeyMap) != len(expectedVersionKeyMap) {
+			t.Log("versionKeyMap len not match!", len(versionKeyMap), len(expectedVersionKeyMap))
+		}
+		t.Fatal("versionKeyMap not match!")
+	}
+
+	t.Log("ListObjectVersions with Delimiter Succeeded!")
+	fmt.Println("ListObjectVersions with Delimiter Succeeded!")
+}
 
 /*
 func Test_ListObjectVersions10000(t *testing.T) {

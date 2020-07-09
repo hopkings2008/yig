@@ -610,7 +610,7 @@ func (yig *YigStorage) CompleteMultipartUpload(ctx context.Context, credential c
 		return
 	}
 
-	if err = yig.MetaStorage.PutObject(ctx, object, &multipart, false); err != nil {
+	if err = yig.MetaStorage.PutObject(ctx, object, &multipart, false, bucket.IsVersioning()); err != nil {
 		return
 	}
 

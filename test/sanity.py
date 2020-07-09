@@ -399,7 +399,7 @@ TESTS = [create_bucket,
          get_object_ranged,
          delete_multipart_object,
          put_bucket_cors, get_bucket_cors, delete_bucket_cors,
-         # put_bucket_versioning, get_bucket_versioning,
+         put_bucket_versioning, get_bucket_versioning,
          delete_bucket, delete_bucket_nonexist]
 
 if __name__ == '__main__':

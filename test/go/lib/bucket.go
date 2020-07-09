@@ -48,7 +48,7 @@ func (s3client *S3Client) PutBucketVersioning(bucketName, status string) (err er
 	return
 }
 
-func (s3client *S3Client) ListObjectVersions(bucketName, keyMarker, versionIdMarker string, maxKeys int64) (*[][]string, bool, string, string, error) {
+func (s3client *S3Client) ListObjectVersions(bucketName, keyMarker, versionIdMarker, prefix, delimiter string, maxKeys int64) (*[][]string, *[]string, bool, string, string, error) {
 	var params *s3.ListObjectVersionsInput
 	if maxKeys > 0 {
 		params = &s3.ListObjectVersionsInput{
@@ -56,6 +56,8 @@ func (s3client *S3Client) ListObjectVersions(bucketName, keyMarker, versionIdMar
 			KeyMarker:       aws.String(keyMarker),
 			VersionIdMarker: aws.String(versionIdMarker),
 			MaxKeys:         aws.Int64(maxKeys),
+			Prefix:			 aws.String(prefix),
+			Delimiter:		 aws.String(delimiter),
 		}
 	} else {
 		params = &s3.ListObjectVersionsInput{
@@ -67,7 +69,7 @@ func (s3client *S3Client) ListObjectVersions(bucketName, keyMarker, versionIdMar
 
 	result, err := s3client.Client.ListObjectVersions(params)
 	if err != nil {
-		return nil, false, "", "", err
+		return nil, nil, false, "", "", err
 	}
 
 	// fmt.Println(result)
@@ -80,7 +82,12 @@ func (s3client *S3Client) ListObjectVersions(bucketName, keyMarker, versionIdMar
 		}
 	}
 
-	return &keyVersionList, aws.BoolValue(result.IsTruncated), aws.StringValue(result.NextKeyMarker), aws.StringValue(result.NextVersionIdMarker), nil
+	dirList := make([]string, len(result.CommonPrefixes))
+	for i, prefix := range result.CommonPrefixes {
+		dirList[i] = aws.StringValue(prefix.Prefix)
+	}
+
+	return &keyVersionList, &dirList, aws.BoolValue(result.IsTruncated), aws.StringValue(result.NextKeyMarker), aws.StringValue(result.NextVersionIdMarker), nil
 }
 
 func (s3client *S3Client) ListObjects(bucketName string) (*[]string, error) {
@@ -101,4 +108,41 @@ func (s3client *S3Client) ListObjects(bucketName string) (*[]string, error) {
 	}
 
 	return &keyList, nil
+}
+
+func (s3client *S3Client) ListObjectsWithMarker(bucketName, marker, prefix, delimiter string, maxKeys int64) (nextMarker string, keyList *[]string, prefixList *[]string, isTruncated bool, reterr error) {
+	reterr = nil
+
+	params := &s3.ListObjectsInput{
+		Bucket: aws.String(bucketName),
+		Prefix: aws.String(prefix),
+		Marker:	aws.String(marker),
+		Delimiter: aws.String(delimiter),
+		MaxKeys: aws.Int64(maxKeys),
+	}
+
+	result, err := s3client.Client.ListObjects(params)
+	if err != nil {
+		reterr = err
+		return
+	}
+
+	// fmt.Println(result)
+	nextMarker = aws.StringValue(result.NextMarker)
+
+	keylist := make([]string, len(result.Contents))
+	for i, _ := range result.Contents {
+		keylist[i] = aws.StringValue(result.Contents[i].Key)
+	}
+	keyList = &keylist
+
+	prefixlist := make([]string, len(result.CommonPrefixes))
+	for i, _ := range result.CommonPrefixes {
+		prefixlist[i] = aws.StringValue(result.CommonPrefixes[i].Prefix)
+	}
+	prefixList = &prefixlist
+
+	isTruncated = aws.BoolValue(result.IsTruncated)
+
+	return
 }

@@ -248,3 +248,8 @@ ALTER TABLE buckets
 ADD COLUMN update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 
 ALTER TABLE buckets ADD COLUMN fileNum bigint(20) DEFAULT 0 AFTER usages; 
+
+/* PREREQUISITE: ALL BUCKETS VERSIONING DISABLED! */
+ALTER TABLE objects ADD COLUMN islatest tinyint(1) DEFAULT 1 AFTER storageclass;
+/* NOTE: ADD INDEX IS SLOW. */
+ALTER TABLE objects ADD KEY listkey (bucketname,name,islatest,deletemarker);
