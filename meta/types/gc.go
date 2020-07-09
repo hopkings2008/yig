@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -18,6 +19,7 @@ type GarbageCollection struct {
 	MTime      time.Time // last modify time of status
 	Parts      map[int]*Part
 	TriedTimes int
+	Size       int64
 	Meta       string // object storage meta.
 }
 
@@ -30,6 +32,7 @@ func (gc GarbageCollection) GetValues() (values map[string]map[string][]byte, er
 			"status":   []byte(gc.Status),
 			"mtime":    []byte(gc.MTime.Format(CREATE_TIME_LAYOUT)),
 			"tried":    []byte(strconv.Itoa(gc.TriedTimes)),
+			"size":     []byte(fmt.Sprintf("%d", gc.Size)),
 			"meta":     []byte(gc.Meta),
 		},
 	}
