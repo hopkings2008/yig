@@ -34,6 +34,7 @@ var (
 )
 
 func deleteFromCeph(index int) {
+	ctx := context.Background()
 	for {
 		if gcStop {
 			helper.Logger.Info(nil, ".")
@@ -47,7 +48,7 @@ func deleteFromCeph(index int) {
 		gcWaitgroup.Add(1)
 		if len(garbage.Parts) == 0 {
 			err = yigs[index].DataStorage[garbage.Location].
-				Remove(garbage.Pool, garbage.ObjectId)
+				Delete(ctx, garbage.Pool, garbage.ObjectId, garbage.Meta, garbage.Size)
 			if err != nil {
 				if strings.Contains(err.Error(), "ret=-2") {
 					helper.Logger.Error(nil, "failed delete", garbage.BucketName, ":", garbage.ObjectName, ":",
@@ -64,7 +65,7 @@ func deleteFromCeph(index int) {
 		} else {
 			for _, p = range garbage.Parts {
 				err = yigs[index].DataStorage[garbage.Location].
-					Remove(garbage.Pool, p.ObjectId)
+					Delete(ctx, garbage.Pool, p.ObjectId, p.Meta, p.Size)
 				if err != nil {
 					if strings.Contains(err.Error(), "ret=-2") {
 						helper.Logger.Error(nil, "failed delete part", garbage.Location, ":", garbage.Pool, ":", p.ObjectId, " error:", err)
