@@ -41,56 +41,6 @@ type CephNativeStripe struct {
 	BigBufPool *sync.Pool
 }
 
-func NewCephStorage(configFile string, logger log.Logger) *CephStorage {
-
-	logger.Info(nil, "Loading Ceph file", configFile)
-
-	Rados, err := rados.NewConn("admin")
-	Rados.SetConfigOption("rados_mon_op_timeout", MON_TIMEOUT)
-	Rados.SetConfigOption("rados_osd_op_timeout", OSD_TIMEOUT)
-
-	err = Rados.ReadConfigFile(configFile)
-	if err != nil {
-		logger.Error(nil, "Failed to open ceph.conf: %s", configFile)
-		return nil
-	}
-
-	err = Rados.Connect()
-	if err != nil {
-		logger.Error(nil, "Failed to connect to remote cluster: %s", configFile)
-		return nil
-	}
-
-	name, err := Rados.GetFSID()
-	if err != nil {
-		logger.Error(nil, "Failed to get FSID: %s", configFile)
-		Rados.Shutdown()
-		return nil
-	}
-
-	id := Rados.GetInstanceID()
-
-	cluster := CephStorage{
-		Conn:       Rados,
-		Name:       name,
-		InstanceId: id,
-		Logger:     logger,
-		BufPool: &sync.Pool{
-			New: func() interface{} {
-				return bytes.NewBuffer(make([]byte, BIG_FILE_THRESHOLD))
-			},
-		},
-		BigBufPool: &sync.Pool{
-			New: func() interface{} {
-				return make([]byte, MAX_CHUNK_SIZE)
-			},
-		},
-	}
-
-	logger.Info(nil, "Ceph Cluster", name, "is ready, InstanceId is", id)
-	return &cluster
-}
-
 func setStripeLayout(p *rados.StriperPool) int {
 	var ret int = 0
 	if ret = p.SetLayoutStripeUnit(STRIPE_UNIT); ret < 0 {
@@ -138,17 +88,17 @@ func drain_pending(p *list.List) int {
 	return ret
 }
 
-func (cluster *CephStorage) GetUniqUploadName() string {
+func (cluster *CephNativeStripe) GetUniqUploadName() string {
 	oid_suffix := atomic.AddUint64(&cluster.Counter, 1)
 	oid := fmt.Sprintf("%d:%d", cluster.InstanceId, oid_suffix)
 	return oid
 }
 
-func (c *CephStorage) Shutdown() {
+func (c *CephNativeStripe) Shutdown() {
 	c.Conn.Shutdown()
 }
 
-func (cluster *CephStorage) doSmallPut(poolname string, oid string, data io.Reader) (size int64, err error) {
+func (cluster *CephNativeStripe) doSmallPut(poolname string, oid string, data io.Reader) (size int64, err error) {
 	tstart := time.Now()
 	pool, err := cluster.Conn.OpenPool(poolname)
 	if err != nil {
@@ -236,7 +186,7 @@ func (rd *RadosSmallDownloader) Close() error {
 	return nil
 }
 
-func (cluster *CephStorage) Put(poolname string, oid string, data io.Reader) (size int64, err error) {
+func (cluster *CephNativeStripe) Put(poolname string, oid string, data io.Reader) (size int64, err error) {
 	if poolname == SMALL_FILE_POOLNAME {
 		return cluster.doSmallPut(poolname, oid, data)
 	}
@@ -373,7 +323,7 @@ func (cluster *CephStorage) Put(poolname string, oid string, data io.Reader) (si
 	return size, nil
 }
 
-func (cluster *CephStorage) Append(poolname string, oid string, data io.Reader, offset uint64, isExist bool) (size int64, err error) {
+func (cluster *CephNativeStripe) Append(poolname string, oid string, data io.Reader, offset uint64, isExist bool) (size int64, err error) {
 	if poolname != BIG_FILE_POOLNAME {
 		return 0, errors.New("specified pool must be used for storing big file.")
 	}
@@ -505,7 +455,7 @@ func (rd *RadosDownloader) Close() error {
 	return nil
 }
 
-func (cluster *CephStorage) getReader(poolName string, oid string, startOffset int64,
+func (cluster *CephNativeStripe) getReader(poolName string, oid string, startOffset int64,
 	length int64) (reader io.ReadCloser, err error) {
 
 	if poolName == SMALL_FILE_POOLNAME {
@@ -548,7 +498,7 @@ func (cluster *CephStorage) getReader(poolName string, oid string, startOffset i
 }
 
 // Works together with `wrapAlignedEncryptionReader`, see comments there.
-func (cluster *CephStorage) getAlignedReader(poolName string, oid string, startOffset int64,
+func (cluster *CephNativeStripe) getAlignedReader(poolName string, oid string, startOffset int64,
 	length int64) (reader io.ReadCloser, err error) {
 
 	alignedOffset := startOffset / AES_BLOCK_SIZE * AES_BLOCK_SIZE
@@ -572,7 +522,7 @@ func (cluster *CephStorage) get(poolName string, oid string, startOffset int64,
 }
 */
 
-func (cluster *CephStorage) doSmallRemove(poolname string, oid string) error {
+func (cluster *CephNativeStripe) doSmallRemove(poolname string, oid string) error {
 	pool, err := cluster.Conn.OpenPool(poolname)
 	if err != nil {
 		return errors.New("Bad poolname")
@@ -581,7 +531,7 @@ func (cluster *CephStorage) doSmallRemove(poolname string, oid string) error {
 	return pool.Delete(oid)
 }
 
-func (cluster *CephStorage) Remove(poolname string, oid string) error {
+func (cluster *CephNativeStripe) Remove(poolname string, oid string) error {
 
 	if poolname == SMALL_FILE_POOLNAME {
 		return cluster.doSmallRemove(poolname, oid)
@@ -604,7 +554,7 @@ func (cluster *CephStorage) Remove(poolname string, oid string) error {
 	return striper.Delete(oid)
 }
 
-func (cluster *CephStorage) GetUsedSpacePercent() (pct int, err error) {
+func (cluster *CephNativeStripe) GetUsedSpacePercent() (pct int, err error) {
 	stat, err := cluster.Conn.GetClusterStats()
 	if err != nil {
 		return 0, errors.New("Stat error")

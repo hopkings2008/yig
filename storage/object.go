@@ -25,12 +25,13 @@ import (
 	meta "github.com/journeymidnight/yig/meta/types"
 	"github.com/journeymidnight/yig/redis"
 	"github.com/journeymidnight/yig/signature"
+	"github.com/journeymidnight/yig/storage/driver"
 )
 
 var latestQueryTime [2]time.Time // 0 is for SMALL_FILE_POOLNAME, 1 is for BIG_FILE_POOLNAME
 const CLUSTER_MAX_USED_SPACE_PERCENT = 85
 
-func (yig *YigStorage) PickOneClusterAndPool(ctx context.Context, bucket string, object string, size int64, isAppend bool) (cluster *CephStorage,
+func (yig *YigStorage) PickOneClusterAndPool(ctx context.Context, bucket string, object string, size int64, isAppend bool) (cluster driver.StorageDriver,
 	poolName string) {
 
 	var idx int
@@ -98,7 +99,7 @@ func (yig *YigStorage) PickOneClusterAndPool(ctx context.Context, bucket string,
 	return
 }
 
-func (yig *YigStorage) GetClusterByFsName(fsName string) (cluster *CephStorage, err error) {
+func (yig *YigStorage) GetClusterByFsName(fsName string) (cluster driver.StorageDriver, err error) {
 	if c, ok := yig.DataStorage[fsName]; ok {
 		cluster = c
 	} else {
@@ -118,9 +119,9 @@ func init() {
 	}
 }
 
-func generateTransWholeObjectFunc(cephCluster *CephStorage, object *meta.Object) func(io.Writer) error {
+func generateTransWholeObjectFunc(ctx context.Context, cephCluster driver.StorageDriver, object *meta.Object) func(io.Writer) error {
 	getWholeObject := func(w io.Writer) error {
-		reader, err := cephCluster.getReader(object.Pool, object.ObjectId, 0, object.Size)
+		reader, err := cephCluster.Read(ctx, object.Pool, object.ObjectId, object.Meta, 0, object.Size)
 		if err != nil {
 			return nil
 		}
@@ -134,7 +135,7 @@ func generateTransWholeObjectFunc(cephCluster *CephStorage, object *meta.Object)
 	return getWholeObject
 }
 
-func generateTransPartObjectFunc(cephCluster *CephStorage, object *meta.Object, part *meta.Part, offset, length int64) func(io.Writer) error {
+func generateTransPartObjectFunc(ctx context.Context, cephCluster driver.StorageDriver, object *meta.Object, part *meta.Part, offset, length int64) func(io.Writer) error {
 	getNormalObject := func(w io.Writer) error {
 		var oid string
 		/* the transfered part could be Part or Object */
@@ -143,7 +144,7 @@ func generateTransPartObjectFunc(cephCluster *CephStorage, object *meta.Object, 
 		} else {
 			oid = object.ObjectId
 		}
-		reader, err := cephCluster.getReader(object.Pool, oid, offset, length)
+		reader, err := cephCluster.Read(ctx, object.Pool, oid, object.Meta, offset, length)
 		if err != nil {
 			return nil
 		}
@@ -183,10 +184,10 @@ func (yig *YigStorage) GetObject(ctx context.Context, object *meta.Object, start
 			return errors.New("Cannot find specified ceph cluster: " + object.Location)
 		}
 
-		transWholeObjectWriter := generateTransWholeObjectFunc(cephCluster, object)
+		transWholeObjectWriter := generateTransWholeObjectFunc(ctx, cephCluster, object)
 
 		if object.SseType == "" { // unencrypted object
-			transPartObjectWriter := generateTransPartObjectFunc(cephCluster, object, nil, startOffset, length)
+			transPartObjectWriter := generateTransPartObjectFunc(ctx, cephCluster, object, nil, startOffset, length)
 
 			return yig.DataCache.WriteFromCache(ctx, object, startOffset, length, writer,
 				transPartObjectWriter, transWholeObjectWriter)
@@ -194,8 +195,10 @@ func (yig *YigStorage) GetObject(ctx context.Context, object *meta.Object, start
 
 		// encrypted object
 		normalAligenedGet := func() (io.ReadCloser, error) {
-			return cephCluster.getAlignedReader(object.Pool, object.ObjectId,
-				startOffset, length)
+			alignedOffset := startOffset / AES_BLOCK_SIZE * AES_BLOCK_SIZE
+			length += startOffset - alignedOffset
+			return cephCluster.Read(ctx, object.Pool, object.ObjectId,
+				object.Meta, alignedOffset, length)
 		}
 		reader, err := yig.DataCache.GetAlignedReader(ctx, object, startOffset, length, normalAligenedGet,
 			transWholeObjectWriter)
@@ -260,7 +263,7 @@ func (yig *YigStorage) GetObject(ctx context.Context, object *meta.Object, start
 			}
 			if object.SseType == "" { // unencrypted object
 
-				transPartFunc := generateTransPartObjectFunc(cephCluster, object, p, readOffset, readLength)
+				transPartFunc := generateTransPartObjectFunc(ctx, cephCluster, object, p, readOffset, readLength)
 				err := transPartFunc(writer)
 				if err != nil {
 					return nil
@@ -269,7 +272,7 @@ func (yig *YigStorage) GetObject(ctx context.Context, object *meta.Object, start
 			}
 
 			// encrypted object
-			err = copyEncryptedPart(object.Pool, p, cephCluster, readOffset, readLength, encryptionKey, writer)
+			err = copyEncryptedPart(ctx, object.Pool, p, cephCluster, readOffset, readLength, encryptionKey, writer)
 			if err != nil {
 				helper.Logger.Error(ctx, "Multipart uploaded object write error:", err)
 			}
@@ -278,11 +281,13 @@ func (yig *YigStorage) GetObject(ctx context.Context, object *meta.Object, start
 	return
 }
 
-func copyEncryptedPart(pool string, part *meta.Part, cephCluster *CephStorage, readOffset int64, length int64,
+func copyEncryptedPart(ctx context.Context, pool string, part *meta.Part, cephCluster driver.StorageDriver, readOffset int64, length int64,
 	encryptionKey []byte, targetWriter io.Writer) (err error) {
 
-	reader, err := cephCluster.getAlignedReader(pool, part.ObjectId,
-		readOffset, length)
+	alignedOffset := readOffset / AES_BLOCK_SIZE * AES_BLOCK_SIZE
+	length += readOffset - alignedOffset
+	reader, err := cephCluster.Read(ctx, pool, part.ObjectId, part.Meta,
+		alignedOffset, length)
 	if err != nil {
 		return err
 	}
@@ -556,7 +561,8 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 		return
 	}
 	cstart := time.Now()
-	bytesWritten, err := cephCluster.Put(poolName, oid, storageReader)
+	// fix me, empty meta.
+	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, "", 0, storageReader)
 	if err != nil {
 		return
 	}
@@ -569,7 +575,7 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 	// Should metadata update failed, add `maybeObjectToRecycle` to `RecycleQueue`,
 	// so the object in Ceph could be removed asynchronously
 	maybeObjectToRecycle := objectToRecycle{
-		location: cephCluster.Name,
+		location: cephCluster.GetName(),
 		pool:     poolName,
 		objectId: oid,
 	}
@@ -598,10 +604,11 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 		}
 	}
 	// TODO validate bucket policy and fancy ACL
+	// fix me, empty meta.
 	object := &meta.Object{
 		Name:             objectName,
 		BucketName:       bucketName,
-		Location:         cephCluster.Name,
+		Location:         cephCluster.GetName(),
 		Pool:             poolName,
 		OwnerId:          credential.UserId,
 		Size:             bytesWritten,
@@ -676,7 +683,7 @@ func (yig *YigStorage) AppendObject(ctx context.Context, bucketName string, obje
 		limitedDataReader = data
 	}
 
-	var cephCluster *CephStorage
+	var cephCluster driver.StorageDriver
 	var poolName, oid string
 	var initializationVector []byte
 	var objSize int64
@@ -721,7 +728,8 @@ func (yig *YigStorage) AppendObject(ctx context.Context, bucketName string, obje
 	if err != nil {
 		return
 	}
-	bytesWritten, err := cephCluster.Append(poolName, oid, storageReader, offset, isObjectExist(objInfo))
+	//fix me. empty meta.
+	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, "", int64(offset), storageReader)
 	if err != nil {
 		helper.Logger.Error(ctx, "cephCluster.Append err:", err, poolName, oid, offset)
 		return
@@ -748,10 +756,11 @@ func (yig *YigStorage) AppendObject(ctx context.Context, bucketName string, obje
 	}
 
 	// TODO validate bucket policy and fancy ACL
+	// fix me, empty meta.
 	object := &meta.Object{
 		Name:                 objectName,
 		BucketName:           bucketName,
-		Location:             cephCluster.Name,
+		Location:             cephCluster.GetName(),
 		Pool:                 poolName,
 		OwnerId:              credential.UserId,
 		Size:                 objSize + bytesWritten,
@@ -890,9 +899,10 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 					}
 				}
 				storageReader, err = wrapEncryptionReader(dataReader, encryptionKey, initializationVector)
-				bytesW, err = cephCluster.Put(poolName, oid, storageReader)
+				// fix me, empty meta
+				bytesW, err = cephCluster.Write(ctx, poolName, oid, targetObject.Meta, 0, storageReader)
 				maybeObjectToRecycle = objectToRecycle{
-					location: cephCluster.Name,
+					location: cephCluster.GetName(),
 					pool:     poolName,
 					objectId: oid,
 				}
@@ -942,14 +952,14 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 			return
 		}
 		var bytesWritten int64
-		bytesWritten, err = cephCluster.Put(poolName, oid, storageReader)
+		bytesWritten, err = cephCluster.Write(ctx, poolName, oid, targetObject.Meta, 0, storageReader)
 		if err != nil {
 			return
 		}
 		// Should metadata update failed, add `maybeObjectToRecycle` to `RecycleQueue`,
 		// so the object in Ceph could be removed asynchronously
 		maybeObjectToRecycle = objectToRecycle{
-			location: cephCluster.Name,
+			location: cephCluster.GetName(),
 			pool:     poolName,
 			objectId: oid,
 		}
@@ -971,7 +981,7 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 
 	targetObject.Rowkey = nil   // clear the rowkey cache
 	targetObject.VersionId = "" // clear the versionId cache
-	targetObject.Location = cephCluster.Name
+	targetObject.Location = cephCluster.GetName()
 	targetObject.Pool = poolName
 	targetObject.OwnerId = credential.UserId
 	targetObject.LastModifiedTime = time.Now().UTC()

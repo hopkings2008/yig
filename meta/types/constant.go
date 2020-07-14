@@ -37,6 +37,11 @@ const (
 	SYNC_EVENT_BUCKET_USAGE_PREFIX = "sync_bucket_usage_"
 )
 
+const (
+	STORAGE_DRIVER_CEPH_STRIPE = iota
+	STORAGE_DRIVER_STRIPE
+)
+
 var (
 	XXTEA_KEY         = []byte("hehehehe")
 	SSE_S3_MASTER_KEY = []byte("hehehehehehehehehehehehehehehehe") // 32 bytes to select AES-256

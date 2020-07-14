@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"time"
 
 	"github.com/journeymidnight/yig/helper"
@@ -20,6 +21,8 @@ type objectToRecycle struct {
 	location   string
 	pool       string
 	objectId   string
+	meta       string
+	size       int64
 	triedTimes int
 }
 
@@ -34,12 +37,13 @@ func initializeRecycler(yig *YigStorage) {
 }
 
 func removeFailed(yig *YigStorage) {
+	ctx := context.Background()
 	yig.WaitGroup.Add(1)
 	defer yig.WaitGroup.Done()
 	for {
 		select {
 		case object := <-RecycleQueue:
-			err := yig.DataStorage[object.location].Remove(object.pool, object.objectId)
+			err := yig.DataStorage[object.location].Delete(ctx, object.pool, object.objectId, object.meta, object.size)
 			if err != nil {
 				object.triedTimes += 1
 				if object.triedTimes > MAX_TRY_TIMES {

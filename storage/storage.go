@@ -16,6 +16,7 @@ import (
 	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/log"
 	"github.com/journeymidnight/yig/meta"
+	"github.com/journeymidnight/yig/storage/driver"
 )
 
 const (
@@ -31,7 +32,7 @@ var (
 
 // *YigStorage implements api.ObjectLayer
 type YigStorage struct {
-	DataStorage map[string]*CephStorage
+	DataStorage map[string]driver.StorageDriver
 	DataCache   DataCache
 	MetaStorage *meta.Meta
 	KMS         crypto.KMS
@@ -43,7 +44,7 @@ type YigStorage struct {
 func New(logger log.Logger, metaCacheType int, enableDataCache bool, CephConfigPattern string) *YigStorage {
 	kms := crypto.NewKMS()
 	yig := YigStorage{
-		DataStorage: make(map[string]*CephStorage),
+		DataStorage: make(map[string]driver.StorageDriver),
 		DataCache:   newDataCache(enableDataCache),
 		MetaStorage: meta.New(logger, meta.CacheType(metaCacheType)),
 		KMS:         kms,
@@ -62,9 +63,9 @@ func New(logger log.Logger, metaCacheType int, enableDataCache bool, CephConfigP
 	}
 
 	for _, conf := range cephConfs {
-		c := NewCephStorage(conf, logger)
+		c := NewCephStorageDriver(conf, logger)
 		if c != nil {
-			yig.DataStorage[c.Name] = c
+			yig.DataStorage[c.GetName()] = c
 		}
 	}
 

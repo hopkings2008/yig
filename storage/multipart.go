@@ -111,7 +111,7 @@ func (yig *YigStorage) NewMultipartUpload(ctx context.Context, credential common
 		InitiatorId:  credential.UserId,
 		OwnerId:      bucket.OwnerId,
 		ContentType:  contentType,
-		Location:     cephCluster.Name,
+		Location:     cephCluster.GetName(),
 		Pool:         pool,
 		Acl:          acl,
 		SseRequest:   sseRequest,
@@ -194,14 +194,15 @@ func (yig *YigStorage) PutObjectPart(ctx context.Context, bucketName, objectName
 	if err != nil {
 		return
 	}
-	bytesWritten, err := cephCluster.Put(poolName, oid, storageReader)
+	// fix me, empty meta.
+	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, "", 0, storageReader)
 	if err != nil {
 		return
 	}
 	// Should metadata update failed, add `maybeObjectToRecycle` to `RecycleQueue`,
 	// so the object in Ceph could be removed asynchronously
 	maybeObjectToRecycle := objectToRecycle{
-		location: cephCluster.Name,
+		location: cephCluster.GetName(),
 		pool:     poolName,
 		objectId: oid,
 	}
@@ -324,14 +325,15 @@ func (yig *YigStorage) CopyObjectPart(ctx context.Context, bucketName, objectNam
 	if err != nil {
 		return
 	}
-	bytesWritten, err := cephCluster.Put(poolName, oid, storageReader)
+	// fix me, empty meta.
+	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, "", 0, storageReader)
 	if err != nil {
 		return
 	}
 	// Should metadata update failed, add `maybeObjectToRecycle` to `RecycleQueue`,
 	// so the object in Ceph could be removed asynchronously
 	maybeObjectToRecycle := objectToRecycle{
-		location: cephCluster.Name,
+		location: cephCluster.GetName(),
 		pool:     poolName,
 		objectId: oid,
 	}
