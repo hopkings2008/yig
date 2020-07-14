@@ -25,6 +25,7 @@ build_internal:
 	cp -f delete $(PWD)/build/bin/
 	cp -f getrediskeys $(PWD)/build/bin/
 	cp -f lc $(PWD)/build/bin/
+	cp -f bucketlogging $(PWD)/build/bin/
 
 pkg:
 	docker run --rm -v $(PWD):/work -w /work journeymidnight/yig bash -c 'bash package/rpmbuild.sh'
