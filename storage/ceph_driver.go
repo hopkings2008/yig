@@ -447,7 +447,7 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 				oid, sr.Offset, err))
 			return n, err
 		}
-		if int64(n) != toRead {
+		if int64(n) > toRead {
 			errMsg := fmt.Sprintf("corrupt to read %s, toRead(%d), readed(%d)",
 				oid, toRead, n)
 			sr.Logger.Error(sr.Ctx, errMsg)
