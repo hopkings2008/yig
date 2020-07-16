@@ -48,7 +48,7 @@ func (ss *StorageSuite) verify(osi types.ObjStoreInfo, dataLen int, c *C) {
 
 	reader, err := driver.Read(ctx, "tiger", "test", meta, 0, int64(dataLen))
 	c.Assert(err, Equals, nil)
-	buf := make([]byte, dataLen+1)
+	buf := make([]byte, dataLen+20)
 	nr, err := reader.Read(buf)
 	c.Assert(err, Equals, nil)
 	c.Assert(nr, Equals, dataLen)
