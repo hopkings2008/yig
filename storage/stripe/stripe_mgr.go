@@ -172,7 +172,13 @@ func (sm *StripeMgr) GetObjectIdList(length int64) []ObjectId {
 }
 
 func (sm *StripeMgr) GetBuf() []byte {
-	return sm.bufPool.Get().([]byte)
+	buf := sm.bufPool.Get().([]byte)
+	buf[0] = 0
+	size := len(buf)
+	for bp := 1; bp < size; bp *= 2 {
+		copy(buf[bp:], buf[:bp])
+	}
+	return buf
 }
 
 func (sm *StripeMgr) PutBuf(buf []byte) {

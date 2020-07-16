@@ -5,6 +5,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"fmt"
 	"io"
 	"path"
 	"path/filepath"
@@ -63,7 +64,11 @@ func New(logger log.Logger, metaCacheType int, enableDataCache bool, CephConfigP
 	}
 
 	for _, conf := range cephConfs {
-		c := NewCephStorageDriver(conf, logger)
+		c, err := NewCephStorageDriver(conf, logger)
+		if err != nil {
+			panic(fmt.Sprintf("PANIC: failed to new ceph storage driver from %s, err: %v",
+				conf, err))
+		}
 		if c != nil {
 			yig.DataStorage[c.GetName()] = c
 		}

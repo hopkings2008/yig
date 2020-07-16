@@ -15,12 +15,12 @@ type ObjStoreInfo struct {
 	StripeNum int `json:"stripeNum"`
 }
 
-func (osi ObjStoreInfo) Encode() (string, error) {
+func (osi *ObjStoreInfo) Encode() (string, error) {
 	buf, err := json.Marshal(&osi)
 	return string(buf), err
 }
 
-func (osi ObjStoreInfo) Decode(info string) error {
-	err := json.Unmarshal([]byte(info), &osi)
+func (osi *ObjStoreInfo) Decode(info string) error {
+	err := json.Unmarshal([]byte(info), osi)
 	return err
 }

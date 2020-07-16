@@ -16,4 +16,5 @@ type StripeSuite struct {
 func (ss *StripeSuite) SetUpSuite(c *C) {
 }
 
-func (ss *StripeSuite) TearDownSuite(c *C) {}
+func (ss *StripeSuite) TearDownSuite(c *C) {
+}
