@@ -25,11 +25,13 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 		objSize := 2 << 20
 		// testSize is larger than unitSize and can be divided by unitSize.
 		if objSize > unitSize && (objSize%unitSize) == 0 {
-			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
-				ObjectSize: objSize,
-				StripeUnit: i << 10,
-				StripeNum:  5,
-			})
+			for j := 1; j <= 16; j++ {
+				testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+					ObjectSize: objSize,
+					StripeUnit: i << 10,
+					StripeNum:  5,
+				})
+			}
 		}
 	}
 	// test 2M
@@ -39,11 +41,13 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 		objSize := 4 << 20
 		// testSize is larger than unitSize and can be divided by unitSize.
 		if objSize > unitSize && (objSize%unitSize) == 0 {
-			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
-				ObjectSize: objSize,
-				StripeUnit: i << 10,
-				StripeNum:  5,
-			})
+			for j := 1; j <= 16; j++ {
+				testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+					ObjectSize: objSize,
+					StripeUnit: i << 10,
+					StripeNum:  j,
+				})
+			}
 		}
 	}
 	// test 2M with 1M object size
@@ -53,11 +57,13 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 		objSize := 1 << 20
 		// testSize is larger than unitSize and can be divided by unitSize.
 		if objSize > unitSize && (objSize%unitSize) == 0 {
-			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
-				ObjectSize: objSize,
-				StripeUnit: i << 10,
-				StripeNum:  5,
-			})
+			for j := 1; j <= 16; j++ {
+				testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+					ObjectSize: objSize,
+					StripeUnit: i << 10,
+					StripeNum:  j,
+				})
+			}
 		}
 	}
 	// test 4M
@@ -67,11 +73,13 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 		objSize := 4 << 20
 		// testSize is larger than unitSize and can be divided by unitSize.
 		if objSize > unitSize && (objSize%unitSize) == 0 {
-			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
-				ObjectSize: objSize,
-				StripeUnit: i << 10,
-				StripeNum:  5,
-			})
+			for j := 1; j <= 16; j++ {
+				testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+					ObjectSize: objSize,
+					StripeUnit: i << 10,
+					StripeNum:  j,
+				})
+			}
 		}
 	}
 	// test 32M.
@@ -81,11 +89,13 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 		objSize := 8 << 20
 		// testSize is larger than unitSize and can be divided by unitSize.
 		if objSize > unitSize && (objSize%unitSize) == 0 {
-			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
-				ObjectSize: objSize,
-				StripeUnit: i << 10,
-				StripeNum:  5,
-			})
+			for j := 1; j <= 16; j++ {
+				testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+					ObjectSize: objSize,
+					StripeUnit: i << 10,
+					StripeNum:  j,
+				})
+			}
 		}
 	}
 	// test 128M
@@ -95,11 +105,13 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 		objSize := 8 << 20
 		// testSize is larger than unitSize and can be divided by unitSize.
 		if objSize > unitSize && (objSize%unitSize) == 0 {
-			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
-				ObjectSize: objSize,
-				StripeUnit: i << 10,
-				StripeNum:  5,
-			})
+			for j := 1; j <= 16; j++ {
+				testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+					ObjectSize: objSize,
+					StripeUnit: i << 10,
+					StripeNum:  j,
+				})
+			}
 		}
 	}
 	// test 256M
@@ -109,11 +121,13 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 		objSize := 8 << 20
 		// testSize is larger than unitSize and can be divided by unitSize.
 		if objSize > unitSize && (objSize%unitSize) == 0 {
-			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
-				ObjectSize: objSize,
-				StripeUnit: i << 10,
-				StripeNum:  5,
-			})
+			for j := 1; j <= 16; j++ {
+				testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+					ObjectSize: objSize,
+					StripeUnit: i << 10,
+					StripeNum:  j,
+				})
+			}
 		}
 	}
 	// test 512M
@@ -123,11 +137,13 @@ func (ss *StripeSuite) TestBasicFuncs(c *C) {
 		objSize := 8 << 20
 		// testSize is larger than unitSize and can be divided by unitSize.
 		if objSize > unitSize && (objSize%unitSize) == 0 {
-			testLens[fileSize] = append(testLens[fileSize], stripeInfo{
-				ObjectSize: objSize,
-				StripeUnit: i << 10,
-				StripeNum:  5,
-			})
+			for j := 1; j <= 16; j++ {
+				testLens[fileSize] = append(testLens[fileSize], stripeInfo{
+					ObjectSize: objSize,
+					StripeUnit: i << 10,
+					StripeNum:  j,
+				})
+			}
 		}
 	}
 	for k, v := range testLens {
