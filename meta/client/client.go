@@ -54,4 +54,8 @@ type Client interface {
 	PutObjectToGarbageCollection(object *Object, tx interface{}) error
 	ScanGarbageCollection(limit int, startRowKey string) ([]GarbageCollection, error)
 	RemoveGarbageCollection(garbage GarbageCollection) error
+
+	SetConfig(c *Configure) error
+	UpdataConfig(c *Configure) error
+	GetConfig() (c Configure, err error)
 }

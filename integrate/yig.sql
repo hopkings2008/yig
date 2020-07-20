@@ -259,3 +259,10 @@ ALTER TABLE objects ADD KEY listkey (bucketname,name,islatest,deletemarker);
 /* bucket logging */
 ALTER TABLE buckets 
 ADD COLUMN logging JSON DEFAULT NULL AFTER cors;
+
+DROP TABLE IF EXISTS `configure`;
+CREATE TABLE `configure` (
+    `instanceid`    varchar(128) DEFAULT NULL,
+    `config`        JSON DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
