@@ -38,7 +38,7 @@ var (
 		"|Content-Encoding|Expires|Key|Success_action_redirect|Redirect|Success_action_status" +
 		"|X-Amz-.+|X-Amz-Meta-.+")
 	StartsWithPolicyRegExp = regexp.MustCompile("(?i)Acl|Cache-Control|Content-Type|Content-Disposition" +
-		"|Content-Encoding|Expires|Key|Success_action_redirect|Redirect|X-Amz-Meta-.+")
+		"|Content-Encoding|Expires|Key|Success_action_redirect|Redirect|X-Amz-Meta-.+|x:.+")
 	IgnoredFormRegExp = regexp.MustCompile("(?i)X-Amz-Signature|File|Policy|X-Ignore-.+")
 )
 

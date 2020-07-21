@@ -83,6 +83,11 @@ func extractMetadataFromHeader(header http.Header) map[string]string {
 	for key := range header {
 		if strings.HasPrefix(strings.ToLower(key), "x-amz-meta-") {
 			metadata[key] = header.Get(key)
+			continue
+		}
+		if strings.HasPrefix(strings.ToLower(key), "x:") {
+			metadata[key] = header.Get(key)
+			continue
 		}
 	}
 	// Return.

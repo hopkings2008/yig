@@ -43,7 +43,7 @@ create_rpm:
     - bash package/rpmbuild.sh
     - echo $CI_COMMIT_TAG
     - create_release.sh  $CI_COMMIT_TAG  $CI_COMMIT_TAG
-    - for i in `ls yig*.x86_64.rpm`; do echo $i; add_asset.sh $CI_COMMIT_TAG $i; s3cmd put $i s3://packages; done
+    - for i in `ls yig*.x86_64.rpm`; do echo $i; add_asset.sh $CI_COMMIT_TAG $i; s3cmd put $i s3://packages -P; done
     - ls
 
 after_script:
