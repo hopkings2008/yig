@@ -29,7 +29,6 @@ CREATE TABLE `buckets` (
   `lc` JSON DEFAULT NULL,
   `uid` varchar(255) DEFAULT NULL,
   `policy` JSON DEFAULT NULL,
-  `website` JSON DEFAULT NULL,
   `createtime` datetime DEFAULT NULL,
   `usages` bigint(20) DEFAULT NULL,
   `versioning` varchar(255) DEFAULT NULL,
@@ -248,3 +247,5 @@ ALTER TABLE buckets
 ADD COLUMN update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 
 ALTER TABLE buckets ADD COLUMN fileNum bigint(20) DEFAULT 0 AFTER usages; 
+
+ALTER TABLE buckets ADD COLUMN website JSON DEFAULT NULL AFTER policy;
