@@ -260,6 +260,7 @@ func ListObjectVersionsWithDelimiterHelper(t *testing.T, sc *S3Client, dirNum, d
 			allExpectedObjectList = append(allExpectedObjectList, keyList...)
 		}
 		allExpectedObjectList = append(allExpectedObjectList, expectedObjectList...)
+		sort.Strings(allExpectedObjectList)
 
 		if !reflect.DeepEqual(allExpectedObjectList, objectList) {
 			t.Fatal("ObjectList not match:", objectList, "expected:", allExpectedObjectList)

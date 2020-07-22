@@ -625,10 +625,14 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 	// Delete old object if necessary.
 	if err = yig.checkOldObject(ctx, bucketName, objectName, bucket.Versioning); err != nil {
 		RecycleQueue <- maybeObjectToRecycle
+		helper.Logger.Error(ctx, err)
+		err = ErrInternalError
 		return
 	}
 	if err = yig.MetaStorage.PutObject(ctx, object, nil, true, bucket.IsVersioning()); err != nil {
 		RecycleQueue <- maybeObjectToRecycle
+		helper.Logger.Error(ctx, err)
+		err = ErrInternalError
 		return
 	}
 

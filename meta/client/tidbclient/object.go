@@ -121,9 +121,10 @@ func (t *TidbClient) GetAllObject(bucketName, objectName, rawVersionId string, m
 		sqltext += " and version > ?"
 		args = append(args, rawVersionId)
 	}
+	sqltext += " order by bucketname,name,version"
 
 	if maxKeys > 0 {
-		sqltext += "limit ?"
+		sqltext += " limit ?"
 		args = append(args, maxKeys)
 	}
 	var versions []uint64

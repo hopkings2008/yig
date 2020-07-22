@@ -93,12 +93,10 @@ func (m *Meta) PutObject(ctx context.Context, object *Object, multipart *Multipa
 		}
 	}()
 
-	if isBucketVersioning {
-		err = m.Client.UpdateLastLatestToFalse(ctx, object, tx)
-		if err != nil {
-			helper.Logger.Error(ctx, err)
-			return err
-		}
+	err = m.Client.UpdateLastLatestToFalse(ctx, object, tx)
+	if err != nil {
+		helper.Logger.Error(ctx, err)
+		return err
 	}
 
 	err = m.Client.PutObject(object, tx)
@@ -176,7 +174,7 @@ func (m *Meta) DeleteObject(ctx context.Context, object *Object, DeleteMarker bo
 		return err
 	}
 
-	if isBucketVersioning && object.IsLatest {
+	if object.IsLatest {
 		// If the deleted object is latest, update last object as latest.
 		err = m.Client.UpdateLastLatestToTrue(ctx, object, tx)
 		if err != nil {
