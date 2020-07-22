@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/meta/types"
-	"github.com/journeymidnight/yig/storage"
 	. "gopkg.in/check.v1"
 )
 
@@ -125,27 +123,22 @@ func (ss *StorageSuite) verifyFromOffset(osi types.ObjStoreInfo, offset int64, s
 	meta, err := osi.Encode()
 	c.Assert(err, Equals, nil)
 	randomReader := NewRandomReader(offset)
-	driver, err := storage.NewCephStorageDriver("/etc/ceph/ceph.conf", helper.Logger)
-	c.Assert(err, Equals, nil)
-	defer func() {
-		driver.Close()
-	}()
 	hasher := md5.New()
 	reader := io.TeeReader(randomReader, hasher)
 	obj := fmt.Sprintf("%s_%d", objectName, offset)
-	n, err := driver.Write(ctx, ss.pool, obj, meta, 0, reader)
+	n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, reader)
 	c.Assert(err, Equals, nil)
 	c.Assert(n, Equals, offset)
 	randomReader = NewRandomReader(size)
 	reader = io.TeeReader(randomReader, hasher)
-	n, err = driver.Write(ctx, ss.pool, obj, meta, offset, reader)
+	n, err = ss.driver.Write(ctx, ss.pool, obj, meta, offset, reader)
 	c.Assert(err, Equals, nil)
 	c.Assert(n, Equals, size)
 	// get the body md5.
 	md5Sum := hasher.Sum(nil)
 	md5Str := hex.EncodeToString(md5Sum[:])
 	// read and verify the md5sum.
-	reader, err = driver.Read(ctx, ss.pool, obj, meta, 0, offset+size)
+	reader, err = ss.driver.Read(ctx, ss.pool, obj, meta, 0, offset+size)
 	c.Assert(err, Equals, nil)
 	totalSize := int64(0)
 	hasher = md5.New()
@@ -164,6 +157,6 @@ func (ss *StorageSuite) verifyFromOffset(osi types.ObjStoreInfo, offset int64, s
 	md5Sum = hasher.Sum(nil)
 	md5ReadStr := hex.EncodeToString(md5Sum[:])
 	c.Assert(md5Str, Equals, md5ReadStr)
-	err = driver.Delete(ctx, ss.pool, obj, meta, totalSize)
+	err = ss.driver.Delete(ctx, ss.pool, obj, meta, totalSize)
 	c.Assert(err, Equals, nil)
 }

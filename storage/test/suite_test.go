@@ -5,6 +5,7 @@ import (
 
 	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/log"
+	"github.com/journeymidnight/yig/storage"
 	. "gopkg.in/check.v1"
 )
 
@@ -15,6 +16,7 @@ var _ = Suite(&StorageSuite{})
 type StorageSuite struct {
 	chunkSize int
 	pool      string
+	driver    *storage.CephStorageDriver
 }
 
 func (ss *StorageSuite) SetUpSuite(c *C) {
@@ -23,8 +25,12 @@ func (ss *StorageSuite) SetUpSuite(c *C) {
 	// the test chunk is 256MB
 	ss.chunkSize = 256 << 20
 	ss.pool = "tiger"
+	var err error
+	ss.driver, err = storage.NewCephStorageDriver("/etc/ceph/ceph.conf", helper.Logger)
+	c.Assert(err, Equals, nil)
 }
 
 func (ss *StorageSuite) TearDownSuite(c *C) {
 	helper.Logger.Close()
+	ss.driver.Close()
 }

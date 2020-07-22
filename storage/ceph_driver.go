@@ -114,7 +114,7 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 			for dataSize > 0 {
 				osi := mgr.GetObjectStoreInfo(offset, dataSize)
 				oid := osi.GetObjectId(objectId)
-				csd.Logger.Info(ctx, fmt.Sprintf("oid: %s, offset: %d", oid, offset))
+				//csd.Logger.Info(ctx, fmt.Sprintf("oid: %s, offset: %d", oid, offset))
 				// write data to ceph pool.
 				// note that osi.Length is the minimum size of dataSize and inner buffer.
 				err := cephPool.Write(oid, chunk.Buf[dataOffset:dataOffset+osi.Length], uint64(osi.Offset))
@@ -176,7 +176,7 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 		}
 		if err == nil || err == io.EOF {
 			// check write goroutine error and put the buf to write.
-			csd.Logger.Info(ctx, fmt.Sprintf("read(%s/%s): %d", pool, objectId, readLen))
+			//csd.Logger.Info(ctx, fmt.Sprintf("read(%s/%s): %d", pool, objectId, readLen))
 			select {
 			case wr := <-resultChan:
 				err = wr.Err
