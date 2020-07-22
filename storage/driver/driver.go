@@ -16,4 +16,5 @@ type StorageDriver interface {
 	GetUniqUploadName() string
 	GetUsedSpacePercent() (int, error)
 	GetName() string
+	Close()
 }

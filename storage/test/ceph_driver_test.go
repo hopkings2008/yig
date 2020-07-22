@@ -127,6 +127,9 @@ func (ss *StorageSuite) verifyFromOffset(osi types.ObjStoreInfo, offset int64, s
 	randomReader := NewRandomReader(offset)
 	driver, err := storage.NewCephStorageDriver("/etc/ceph/ceph.conf", helper.Logger)
 	c.Assert(err, Equals, nil)
+	defer func() {
+		driver.Close()
+	}()
 	hasher := md5.New()
 	reader := io.TeeReader(randomReader, hasher)
 	obj := fmt.Sprintf("%s_%d", objectName, offset)

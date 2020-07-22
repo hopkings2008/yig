@@ -29,6 +29,10 @@ type CephStorageDriver struct {
 	stripeMgrs map[string]*stripe.StripeMgr
 }
 
+func (csd *CephStorageDriver) Close() {
+	csd.Conn.Shutdown()
+}
+
 /*
 * Chunk to write to
 *
@@ -88,14 +92,14 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 			pool, objectId, err))
 		return 0, err
 	}
+	defer func() {
+		cephPool.Destroy()
+	}()
 
 	// resultChan is closed by write goroutine.
 	resultChan := make(chan WriteResult)
 	// dataChan is closed by read goroutine.
 	dataChan := make(chan Chunk)
-	defer func() {
-		cephPool.Destroy()
-	}()
 
 	// write goroutine. it must close the resultChan when it exists.
 	go func() {
@@ -239,6 +243,7 @@ func (csd *CephStorageDriver) Read(ctx context.Context, pool string, objectId st
 			pool, objectId, err))
 		return nil, err
 	}
+	// cephPool will be closed in StripeReader.Close()
 	sr := &StripeReader{
 		Ctx:      ctx,
 		Logger:   csd.Logger,
@@ -279,6 +284,9 @@ func (csd *CephStorageDriver) Delete(ctx context.Context, pool string, objectId 
 			pool, objectId, err))
 		return err
 	}
+	defer func() {
+		cephPool.Destroy()
+	}()
 	// get all the stripe oids in ceph for this object.
 	oids := mgr.GetObjectIds(objectId, size)
 	for _, oid := range oids {
@@ -482,5 +490,6 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 }
 
 func (sr *StripeReader) Close() error {
+	sr.CephPool.Destroy()
 	return nil
 }

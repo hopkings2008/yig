@@ -92,6 +92,10 @@ func (y *YigStorage) Stop() {
 	helper.Logger.Info(nil, "done")
 	helper.Logger.Info(nil, "Stopping MetaStorage...")
 	y.MetaStorage.Stop()
+	for _, driver := range y.DataStorage {
+		driver.Close()
+	}
+	helper.Logger.Info(nil, "Stopping DataStorage...")
 }
 
 func (yig *YigStorage) encryptionKeyFromSseRequest(sseRequest datatype.SseRequest, bucket, object string) (key []byte, encKey []byte, err error) {
