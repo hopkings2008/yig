@@ -30,6 +30,17 @@ type CephStorageDriver struct {
 }
 
 /*
+* Chunk to write to
+*
+ */
+type Chunk struct {
+	// Buf contains data
+	Buf []byte
+	// data size in Buf
+	Size int
+}
+
+/*
 * WriteResult: records the result of each write operation to underlying storage.
  */
 type WriteResult struct {
@@ -81,7 +92,7 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 	// resultChan is closed by write goroutine.
 	resultChan := make(chan WriteResult)
 	// dataChan is closed by read goroutine.
-	dataChan := make(chan []byte)
+	dataChan := make(chan Chunk)
 	defer func() {
 		cephPool.Destroy()
 	}()
@@ -93,8 +104,8 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 			resultChan <- wr
 			close(resultChan)
 		}()
-		for data := range dataChan {
-			dataSize := int64(len(data))
+		for chunk := range dataChan {
+			dataSize := int64(chunk.Size)
 			dataOffset := int64(0)
 			for dataSize > 0 {
 				osi := mgr.GetObjectStoreInfo(offset, dataSize)
@@ -102,13 +113,13 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 				csd.Logger.Info(ctx, fmt.Sprintf("oid: %s, offset: %d", oid, offset))
 				// write data to ceph pool.
 				// note that osi.Length is the minimum size of dataSize and inner buffer.
-				err := cephPool.Write(oid, data[dataOffset:dataOffset+osi.Length], uint64(osi.Offset))
+				err := cephPool.Write(oid, chunk.Buf[dataOffset:dataOffset+osi.Length], uint64(osi.Offset))
 				if err != nil {
 					csd.Logger.Error(ctx, fmt.Sprintf("failed to write %s/%s with oid(%s) and offset %d, err: %v",
 						pool, objectId, oid, offset, err))
 					wr.Err = err
 					// release the data buffer.
-					mgr.PutBuf(data)
+					mgr.PutBuf(chunk.Buf)
 					return
 				}
 				// update position.
@@ -118,7 +129,7 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 				wr.N += osi.Length
 			}
 			// relase the data buffer.
-			mgr.PutBuf(data)
+			mgr.PutBuf(chunk.Buf)
 		}
 	}()
 
@@ -171,7 +182,10 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 					close(dataChan)
 					return wr.N, err
 				}
-			case dataChan <- buf[:readLen]:
+			case dataChan <- Chunk{
+				Buf:  buf,
+				Size: readLen,
+			}:
 			}
 
 			if err == nil {

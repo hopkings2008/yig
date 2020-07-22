@@ -13,11 +13,16 @@ func Test(t *testing.T) { TestingT(t) }
 var _ = Suite(&StorageSuite{})
 
 type StorageSuite struct {
+	chunkSize int
+	pool      string
 }
 
 func (ss *StorageSuite) SetUpSuite(c *C) {
 	logLevel := log.ParseLevel(helper.CONFIG.LogLevel)
 	helper.Logger = log.NewFileLogger("/var/log/yig/ceph_test.log", logLevel)
+	// the test chunk is 256MB
+	ss.chunkSize = 256 << 20
+	ss.pool = "tiger"
 }
 
 func (ss *StorageSuite) TearDownSuite(c *C) {
