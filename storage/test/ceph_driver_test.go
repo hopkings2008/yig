@@ -138,11 +138,12 @@ func (ss *StorageSuite) verifyFromOffset(osi types.ObjStoreInfo, offset int64, s
 	md5Sum := hasher.Sum(nil)
 	md5Str := hex.EncodeToString(md5Sum[:])
 	// read and verify the md5sum.
-	reader, err = ss.driver.Read(ctx, ss.pool, obj, meta, 0, offset+size)
+	driverReader, err := ss.driver.Read(ctx, ss.pool, obj, meta, 0, offset+size)
 	c.Assert(err, Equals, nil)
+	defer driverReader.Close()
 	totalSize := int64(0)
 	hasher = md5.New()
-	reader = io.TeeReader(reader, hasher)
+	reader = io.TeeReader(driverReader, hasher)
 	for {
 		buf := make([]byte, 4<<20)
 		n, err := reader.Read(buf)
