@@ -32,8 +32,8 @@ var latestQueryTime [2]time.Time // 0 is for SMALL_FILE_POOLNAME, 1 is for BIG_F
 const CLUSTER_MAX_USED_SPACE_PERCENT = 85
 
 func (yig *YigStorage) PickOneClusterAndPool(ctx context.Context, bucket string, object string, size int64, isAppend bool) (cluster driver.StorageDriver,
-	poolName string) {
-
+	poolName string, storeMeta string) {
+	var err error
 	var idx int
 	if isAppend {
 		poolName = BIG_FILE_POOLNAME
@@ -48,6 +48,14 @@ func (yig *YigStorage) PickOneClusterAndPool(ctx context.Context, bucket string,
 		poolName = BIG_FILE_POOLNAME
 		idx = 1
 	}
+
+	storeMeta, err = yig.DefaultStripeInfo.Encode()
+	if err != nil {
+		helper.Logger.Error(ctx, fmt.Sprintf("failed to encode default stripe info(%v), err: %v",
+			*yig.DefaultStripeInfo, err))
+		return
+	}
+
 	var needCheck bool
 	queryTime := latestQueryTime[idx]
 	if time.Since(queryTime).Hours() > 24 { // check used space every 24 hours
@@ -138,13 +146,16 @@ func generateTransWholeObjectFunc(ctx context.Context, cephCluster driver.Storag
 func generateTransPartObjectFunc(ctx context.Context, cephCluster driver.StorageDriver, object *meta.Object, part *meta.Part, offset, length int64) func(io.Writer) error {
 	getNormalObject := func(w io.Writer) error {
 		var oid string
+		var storeMeta string
 		/* the transfered part could be Part or Object */
 		if part != nil {
 			oid = part.ObjectId
+			storeMeta = part.Meta
 		} else {
 			oid = object.ObjectId
+			storeMeta = object.Meta
 		}
-		reader, err := cephCluster.Read(ctx, object.Pool, oid, object.Meta, offset, length)
+		reader, err := cephCluster.Read(ctx, object.Pool, oid, storeMeta, offset, length)
 		if err != nil {
 			return nil
 		}
@@ -539,7 +550,7 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 		limitedDataReader = data
 	}
 
-	cephCluster, poolName := yig.PickOneClusterAndPool(ctx, bucketName, objectName, size, false)
+	cephCluster, poolName, storeMeta := yig.PickOneClusterAndPool(ctx, bucketName, objectName, size, false)
 	if cephCluster == nil {
 		return result, ErrInternalError
 	}
@@ -561,8 +572,7 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 		return
 	}
 	cstart := time.Now()
-	// fix me, empty meta.
-	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, "", 0, storageReader)
+	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, storeMeta, 0, storageReader)
 	if err != nil {
 		return
 	}
@@ -578,6 +588,8 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 		location: cephCluster.GetName(),
 		pool:     poolName,
 		objectId: oid,
+		meta:     storeMeta,
+		size:     size,
 	}
 	if bytesWritten < size {
 		RecycleQueue <- maybeObjectToRecycle
@@ -604,7 +616,6 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 		}
 	}
 	// TODO validate bucket policy and fancy ACL
-	// fix me, empty meta.
 	object := &meta.Object{
 		Name:             objectName,
 		BucketName:       bucketName,
@@ -626,6 +637,7 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 		CustomAttributes:     metadata,
 		Type:                 meta.ObjectTypeNormal,
 		StorageClass:         storageClass,
+		Meta:                 storeMeta,
 	}
 
 	result.LastModified = object.LastModifiedTime
@@ -684,7 +696,7 @@ func (yig *YigStorage) AppendObject(ctx context.Context, bucketName string, obje
 	}
 
 	var cephCluster driver.StorageDriver
-	var poolName, oid string
+	var poolName, oid, storeMeta string
 	var initializationVector []byte
 	var objSize int64
 	var oldVersionId string
@@ -705,7 +717,7 @@ func (yig *YigStorage) AppendObject(ctx context.Context, bucketName string, obje
 		isNewObj = false
 	} else {
 		// New appendable object
-		cephCluster, poolName = yig.PickOneClusterAndPool(ctx, bucketName, objectName, size, true)
+		cephCluster, poolName, storeMeta = yig.PickOneClusterAndPool(ctx, bucketName, objectName, size, true)
 		if cephCluster == nil || poolName != BIG_FILE_POOLNAME {
 			helper.Logger.Error(ctx, "PickOneClusterAndPool error")
 			return result, ErrInternalError
@@ -728,8 +740,8 @@ func (yig *YigStorage) AppendObject(ctx context.Context, bucketName string, obje
 	if err != nil {
 		return
 	}
-	//fix me. empty meta.
-	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, "", int64(offset), storageReader)
+
+	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, storeMeta, int64(offset), storageReader)
 	if err != nil {
 		helper.Logger.Error(ctx, "cephCluster.Append err:", err, poolName, oid, offset)
 		return
@@ -756,7 +768,6 @@ func (yig *YigStorage) AppendObject(ctx context.Context, bucketName string, obje
 	}
 
 	// TODO validate bucket policy and fancy ACL
-	// fix me, empty meta.
 	object := &meta.Object{
 		Name:                 objectName,
 		BucketName:           bucketName,
@@ -777,6 +788,7 @@ func (yig *YigStorage) AppendObject(ctx context.Context, bucketName string, obje
 		CustomAttributes:     metadata,
 		Type:                 meta.ObjectTypeAppendable,
 		StorageClass:         storageClass,
+		Meta:                 storeMeta,
 	}
 
 	result.LastModified = object.LastModifiedTime
@@ -866,7 +878,7 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 	var limitedDataReader io.Reader
 	limitedDataReader = io.LimitReader(source, targetObject.Size)
 
-	cephCluster, poolName := yig.PickOneClusterAndPool(ctx, targetObject.BucketName,
+	cephCluster, poolName, storeMeta := yig.PickOneClusterAndPool(ctx, targetObject.BucketName,
 		targetObject.Name, targetObject.Size, false)
 
 	if len(targetObject.Parts) != 0 {
@@ -899,12 +911,13 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 					}
 				}
 				storageReader, err = wrapEncryptionReader(dataReader, encryptionKey, initializationVector)
-				// fix me, empty meta
-				bytesW, err = cephCluster.Write(ctx, poolName, oid, targetObject.Meta, 0, storageReader)
+				bytesW, err = cephCluster.Write(ctx, poolName, oid, storeMeta, 0, storageReader)
 				maybeObjectToRecycle = objectToRecycle{
 					location: cephCluster.GetName(),
 					pool:     poolName,
 					objectId: oid,
+					meta:     storeMeta,
+					size:     targetObject.Size,
 				}
 				if bytesW < part.Size {
 					RecycleQueue <- maybeObjectToRecycle
@@ -924,6 +937,7 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 				part.ObjectId = oid
 
 				part.InitializationVector = initializationVector
+				part.Meta = storeMeta
 				return result, nil
 			}()
 			if err != nil {
@@ -952,7 +966,7 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 			return
 		}
 		var bytesWritten int64
-		bytesWritten, err = cephCluster.Write(ctx, poolName, oid, targetObject.Meta, 0, storageReader)
+		bytesWritten, err = cephCluster.Write(ctx, poolName, oid, storeMeta, 0, storageReader)
 		if err != nil {
 			return
 		}
@@ -962,6 +976,8 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 			location: cephCluster.GetName(),
 			pool:     poolName,
 			objectId: oid,
+			meta:     storeMeta,
+			size:     targetObject.Size,
 		}
 		if bytesWritten < targetObject.Size {
 			RecycleQueue <- maybeObjectToRecycle
@@ -976,6 +992,7 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 		result.Md5 = calculatedMd5
 		targetObject.ObjectId = oid
 		targetObject.InitializationVector = initializationVector
+		targetObject.Meta = storeMeta
 	}
 	// TODO validate bucket policy and fancy ACL
 
@@ -988,6 +1005,7 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 	targetObject.NullVersion = helper.Ternary(bucket.Versioning == "Enabled", false, true).(bool)
 	targetObject.DeleteMarker = false
 	targetObject.SseType = sseRequest.Type
+	targetObject.Meta = storeMeta
 	targetObject.EncryptionKey = helper.Ternary(sseRequest.Type == crypto.S3.String(),
 		cipherKey, []byte("")).([]byte)
 

@@ -135,9 +135,9 @@ func (t *TidbClient) PutObjectPart(multipart *Multipart, part *Part, tx interfac
 		return
 	}
 	lastModified := lastt.Format(TIME_LAYOUT_TIDB)
-	sqltext := "insert into multipartpart(partnumber,size,objectid,offset,etag,lastmodified,initializationvector,bucketname,objectname,uploadtime) " +
-		"values(?,?,?,?,?,?,?,?,?,?)"
-	_, err = sqlTx.Exec(sqltext, part.PartNumber, part.Size, part.ObjectId, part.Offset, part.Etag, lastModified, part.InitializationVector, multipart.BucketName, multipart.ObjectName, uploadtime)
+	sqltext := "insert into multipartpart(partnumber,size,objectid,offset,etag,lastmodified,initializationvector,bucketname,objectname,uploadtime,meta) " +
+		"values(?,?,?,?,?,?,?,?,?,?,?)"
+	_, err = sqlTx.Exec(sqltext, part.PartNumber, part.Size, part.ObjectId, part.Offset, part.Etag, lastModified, part.InitializationVector, multipart.BucketName, multipart.ObjectName, uploadtime, part.Meta)
 	return
 }
 

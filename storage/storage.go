@@ -17,6 +17,7 @@ import (
 	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/log"
 	"github.com/journeymidnight/yig/meta"
+	"github.com/journeymidnight/yig/meta/types"
 	"github.com/journeymidnight/yig/storage/driver"
 )
 
@@ -33,13 +34,14 @@ var (
 
 // *YigStorage implements api.ObjectLayer
 type YigStorage struct {
-	DataStorage map[string]driver.StorageDriver
-	DataCache   DataCache
-	MetaStorage *meta.Meta
-	KMS         crypto.KMS
-	Logger      log.Logger
-	Stopping    bool
-	WaitGroup   *sync.WaitGroup
+	DataStorage       map[string]driver.StorageDriver
+	DataCache         DataCache
+	MetaStorage       *meta.Meta
+	KMS               crypto.KMS
+	Logger            log.Logger
+	Stopping          bool
+	WaitGroup         *sync.WaitGroup
+	DefaultStripeInfo *types.ObjStoreInfo
 }
 
 func New(logger log.Logger, metaCacheType int, enableDataCache bool, CephConfigPattern string) *YigStorage {
@@ -52,6 +54,12 @@ func New(logger log.Logger, metaCacheType int, enableDataCache bool, CephConfigP
 		Logger:      logger,
 		Stopping:    false,
 		WaitGroup:   new(sync.WaitGroup),
+		DefaultStripeInfo: &types.ObjStoreInfo{
+			Type:             types.STORAGE_DRIVER_STRIPE,
+			StripeObjectSize: helper.CONFIG.Stripe.StripeObject,
+			StripeUnit:       helper.CONFIG.Stripe.StripeUnit,
+			StripeNum:        helper.CONFIG.Stripe.StripeNum,
+		},
 	}
 	if CephConfigPattern == "" {
 		CephConfigPattern = DEFAULT_CEPHCONFIG_PATTERN

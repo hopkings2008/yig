@@ -77,6 +77,9 @@ type Config struct {
 
 	DownLoadBufPoolSize int `toml:"download_buf_pool_size"`
 
+	// Stripe config
+	Stripe StripeConfig `toml:"stripe"`
+
 	KMS KMSConfig `toml:"kms"`
 
 	// Message Bus
@@ -94,6 +97,12 @@ type PluginConfig struct {
 	Path   string                 `toml:"path"`
 	Enable bool                   `toml:"enable"`
 	Args   map[string]interface{} `toml:"args"`
+}
+
+type StripeConfig struct {
+	StripeObject int `toml:"stripe_object"`
+	StripeUnit   int `toml:"stripe_unit"`
+	StripeNum    int `toml:"stripe_num"`
 }
 
 type KMSConfig struct {
@@ -206,6 +215,10 @@ func MarshalTOMLConfig() error {
 	CONFIG.CacheCircuitOpenThreshold = Ternary(c.CacheCircuitOpenThreshold < 0, 0, c.CacheCircuitOpenThreshold).(int)
 
 	CONFIG.DownLoadBufPoolSize = Ternary(c.DownLoadBufPoolSize < MIN_DOWNLOAD_BUFPOOL_SIZE || c.DownLoadBufPoolSize > MAX_DOWNLOAD_BUFPOOL_SIZE, MIN_DOWNLOAD_BUFPOOL_SIZE, c.DownLoadBufPoolSize).(int)
+
+	CONFIG.Stripe.StripeObject = Ternary(c.Stripe.StripeObject <= 0, 4<<20, c.Stripe.StripeObject).(int)
+	CONFIG.Stripe.StripeUnit = Ternary(c.Stripe.StripeUnit <= 0, 1<<20, c.Stripe.StripeUnit).(int)
+	CONFIG.Stripe.StripeNum = Ternary(c.Stripe.StripeNum <= 0, 2, c.Stripe.StripeNum).(int)
 
 	CONFIG.KMS = c.KMS
 

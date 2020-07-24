@@ -450,13 +450,13 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 	if sr.Length <= 0 {
 		return 0, io.EOF
 	}
-	if sr.Offset >= sr.Length {
-		return 0, io.EOF
-	}
 
 	bufLen := int64(len(p))
 	bufOffset := 0
 	for bufLen > 0 {
+		if sr.Length <= 0 {
+			return bufOffset, nil
+		}
 		osi := sr.Mgr.GetObjectStoreInfo(sr.Offset, sr.Length)
 		oid := osi.GetObjectId(sr.ObjectId)
 		toRead := osi.Length
@@ -468,6 +468,9 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 			sr.Logger.Error(sr.Ctx, fmt.Sprintf("failed to read %s with offset %d, err: %v",
 				oid, sr.Offset, err))
 			return n, err
+		}
+		if n == 0 {
+			return bufOffset, io.EOF
 		}
 		if int64(n) > toRead {
 			errMsg := fmt.Sprintf("corrupt to read %s, toRead(%d), readed(%d)",
@@ -482,9 +485,7 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 		bufLen -= int64(n)
 		// offset for the whole input.
 		sr.Offset += int64(n)
-		if sr.Offset >= sr.Length {
-			break
-		}
+		sr.Length -= int64(n)
 	}
 	return bufOffset, nil
 }

@@ -106,7 +106,7 @@ func (yig *YigStorage) NewMultipartUpload(ctx context.Context, credential common
 		contentType = "application/octet-stream"
 	}
 
-	cephCluster, pool := yig.PickOneClusterAndPool(ctx, bucketName, objectName, -1, false)
+	cephCluster, pool, _ := yig.PickOneClusterAndPool(ctx, bucketName, objectName, -1, false)
 	multipartMetadata := meta.MultipartMetadata{
 		InitiatorId:  credential.UserId,
 		OwnerId:      bucket.OwnerId,
@@ -194,8 +194,12 @@ func (yig *YigStorage) PutObjectPart(ctx context.Context, bucketName, objectName
 	if err != nil {
 		return
 	}
+	storeMeta, err := yig.DefaultStripeInfo.Encode()
+	if err != nil {
+		return
+	}
 	// fix me, empty meta.
-	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, "", 0, storageReader)
+	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, storeMeta, 0, storageReader)
 	if err != nil {
 		return
 	}
@@ -205,6 +209,8 @@ func (yig *YigStorage) PutObjectPart(ctx context.Context, bucketName, objectName
 		location: cephCluster.GetName(),
 		pool:     poolName,
 		objectId: oid,
+		meta:     storeMeta,
+		size:     size,
 	}
 	if bytesWritten < size {
 		RecycleQueue <- maybeObjectToRecycle
@@ -249,6 +255,7 @@ func (yig *YigStorage) PutObjectPart(ctx context.Context, bucketName, objectName
 		Etag:                 calculatedMd5,
 		LastModified:         time.Now().UTC().Format(meta.CREATE_TIME_LAYOUT),
 		InitializationVector: initializationVector,
+		Meta:                 storeMeta,
 	}
 	err = yig.MetaStorage.PutObjectPart(ctx, multipart, part)
 	if err != nil {
@@ -325,8 +332,11 @@ func (yig *YigStorage) CopyObjectPart(ctx context.Context, bucketName, objectNam
 	if err != nil {
 		return
 	}
-	// fix me, empty meta.
-	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, "", 0, storageReader)
+	storeMeta, err := yig.DefaultStripeInfo.Encode()
+	if err != nil {
+		return
+	}
+	bytesWritten, err := cephCluster.Write(ctx, poolName, oid, storeMeta, 0, storageReader)
 	if err != nil {
 		return
 	}
@@ -336,6 +346,8 @@ func (yig *YigStorage) CopyObjectPart(ctx context.Context, bucketName, objectNam
 		location: cephCluster.GetName(),
 		pool:     poolName,
 		objectId: oid,
+		meta:     storeMeta,
+		size:     size,
 	}
 
 	if bytesWritten < size {
@@ -373,6 +385,7 @@ func (yig *YigStorage) CopyObjectPart(ctx context.Context, bucketName, objectNam
 		Etag:                 result.Md5,
 		LastModified:         now.Format(meta.CREATE_TIME_LAYOUT),
 		InitializationVector: initializationVector,
+		Meta:                 storeMeta,
 	}
 	result.LastModified = now
 
@@ -388,6 +401,8 @@ func (yig *YigStorage) CopyObjectPart(ctx context.Context, bucketName, objectNam
 			location: multipart.Metadata.Location,
 			pool:     multipart.Metadata.Pool,
 			objectId: part.ObjectId,
+			meta:     part.Meta,
+			size:     part.Size,
 		}
 	}
 
@@ -514,6 +529,8 @@ func (yig *YigStorage) AbortMultipartUpload(ctx context.Context, credential comm
 			location: multipart.Metadata.Location,
 			pool:     multipart.Metadata.Pool,
 			objectId: p.ObjectId,
+			meta:     p.Meta,
+			size:     p.Size,
 		}
 		removedSize += p.Size
 	}
