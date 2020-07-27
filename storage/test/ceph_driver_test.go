@@ -52,7 +52,7 @@ func (ss *StorageSuite) Test5GBasic(c *C) {
 				elem := TestElem{
 					Osi: types.ObjStoreInfo{
 						Type:             types.STORAGE_DRIVER_STRIPE,
-						StripeObjectSize: objSize << 20,
+						StripeObjectSize: objSize << 10,
 						StripeUnit:       unitSize << 10,
 						StripeNum:        k,
 					},
