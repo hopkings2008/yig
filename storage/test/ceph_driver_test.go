@@ -81,9 +81,12 @@ func (ss *StorageSuite) Test5GBasic(c *C) {
 		close(chs)
 	}()
 	// wait for their finish.
+	totalFin := 0
 	for _, resultCh := range results {
 		for result := range resultCh {
-			c.Logf("stripe(%v), size: %d test succeeds", result.Osi, result.Size)
+			totalFin += 1
+			c.Logf("stripe(%v), size: %d test succeeds, finished %d cases, total %d cases",
+				result.Osi, result.Size, totalFin, len(elems))
 		}
 	}
 }

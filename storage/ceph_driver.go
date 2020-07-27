@@ -447,15 +447,11 @@ type StripeReader struct {
 }
 
 func (sr *StripeReader) Read(p []byte) (int, error) {
-	if sr.Length <= 0 {
-		return 0, io.EOF
-	}
-
 	bufLen := int64(len(p))
 	bufOffset := 0
 	for bufLen > 0 {
 		if sr.Length <= 0 {
-			return bufOffset, nil
+			return bufOffset, io.EOF
 		}
 		osi := sr.Mgr.GetObjectStoreInfo(sr.Offset, sr.Length)
 		oid := osi.GetObjectId(sr.ObjectId)
