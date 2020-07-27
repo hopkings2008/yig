@@ -41,28 +41,31 @@ func (ss *StorageSuite) Test5GBasic(c *C) {
 	var elems []TestElem
 	objSize := 512
 	// stripe object size
-	for i := 0; i < 6; i++ {
-		// stripe unit size from 1k to stripe object size.
-		for j := 1; j <= objSize; j++ {
-			unitSize := j << 10
-			if ((objSize << 10) % unitSize) == 0 {
-				// stripe number from 1 to 16
-				for k := 1; k <= 16; k++ {
-					elem := TestElem{
-						Osi: types.ObjStoreInfo{
-							Type:             types.STORAGE_DRIVER_STRIPE,
-							StripeObjectSize: objSize << 10,
-							StripeUnit:       unitSize,
-							StripeNum:        k,
-						},
-						Size: len5G,
-					}
-					elems = append(elems, elem)
+	for i := 0; i < 7; i++ {
+		// stripe unit size from 4k to stripe object size.
+		// each loop will double the former unit size.
+		// 4k, 8k, 16k, 32k... upto stripe object size.
+		unitSize := 4
+		for unitSize <= objSize {
+			// stripe number from 1 to 8
+			for k := 1; k <= 8; k++ {
+				elem := TestElem{
+					Osi: types.ObjStoreInfo{
+						Type:             types.STORAGE_DRIVER_STRIPE,
+						StripeObjectSize: objSize << 20,
+						StripeUnit:       unitSize << 10,
+						StripeNum:        k,
+					},
+					Size: len5G,
 				}
+				elems = append(elems, elem)
 			}
+			unitSize *= 2
 		}
 		objSize *= 2
 	}
+
+	c.Logf("there are total %d test cases", len(elems))
 
 	// start test verify goroutines.
 	for i := 0; i < numGoroutine; i++ {

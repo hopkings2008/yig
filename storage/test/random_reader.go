@@ -28,9 +28,7 @@ func (rr *RandomReader) Read(p []byte) (int, error) {
 		if dataLen > rr.chunkSize-rr.bufOffset {
 			dataLen = rr.chunkSize - rr.bufOffset
 		}
-		/*if dataLen > pLen-pOffset {
-			dataLen = pLen - pOffset
-		}*/
+
 		n := copy(p[pOffset:], rr.buf[rr.bufOffset:rr.bufOffset+dataLen])
 		pOffset += n
 		rr.bufOffset += n
