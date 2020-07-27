@@ -34,7 +34,7 @@ func (ss *StorageSuite) TestCephDriverBasicWrite(c *C) {
 func (ss *StorageSuite) Test5GBasic(c *C) {
 	// change this to cpu_num * 1.5
 	numGoroutine := 4
-	len5G := int64(1 << 20)
+	len5G := int64(5 << 30)
 	chs := make(chan TestElem)
 	var results []<-chan TestResult
 	//stripe object: 512K, 1M, 2M, 4M, 8M, 16M, 32M
@@ -42,11 +42,11 @@ func (ss *StorageSuite) Test5GBasic(c *C) {
 	objSize := 512
 	// stripe object size
 	for i := 0; i < 6; i++ {
-		// stripe unit size
+		// stripe unit size from 1k to stripe object size.
 		for j := 1; j <= objSize; j++ {
 			unitSize := j << 10
 			if ((objSize << 10) % unitSize) == 0 {
-				// stripe number
+				// stripe number from 1 to 16
 				for k := 1; k <= 16; k++ {
 					elem := TestElem{
 						Osi: types.ObjStoreInfo{
@@ -127,18 +127,33 @@ func (ss *StorageSuite) verifyFromOffset(osi types.ObjStoreInfo, offset int64, s
 	reader := io.TeeReader(randomReader, hasher)
 	obj := fmt.Sprintf("%s_%d", objectName, offset)
 	n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, reader)
+	if err != nil {
+		c.Logf("ObjStoreInfo(%v) failed to write(%d, %d), err: %v", osi, 0, offset, err)
+	}
 	c.Assert(err, Equals, nil)
+	if n != offset {
+		c.Logf("ObjStoreInfo(%v) failed to write(%d, %d), written: %d != %d", osi, 0, offset, n, offset)
+	}
 	c.Assert(n, Equals, offset)
 	randomReader = NewRandomReader(size)
 	reader = io.TeeReader(randomReader, hasher)
 	n, err = ss.driver.Write(ctx, ss.pool, obj, meta, offset, reader)
+	if err != nil {
+		c.Logf("ObjStoreInfo(%v) failed to write(%d, %d), err: %v", osi, offset, size, err)
+	}
 	c.Assert(err, Equals, nil)
+	if n != size {
+		c.Logf("ObjStoreInfo(%v) failed to write(%d, %d), written: %d != %d", osi, offset, size, n, size)
+	}
 	c.Assert(n, Equals, size)
 	// get the body md5.
 	md5Sum := hasher.Sum(nil)
 	md5Str := hex.EncodeToString(md5Sum[:])
 	// read and verify the md5sum.
 	driverReader, err := ss.driver.Read(ctx, ss.pool, obj, meta, 0, offset+size)
+	if err != nil {
+		c.Logf("ObjStoreInfo(%v) failed to get reader(%d, %d), err: %v", osi, 0, offset+size, err)
+	}
 	c.Assert(err, Equals, nil)
 	defer driverReader.Close()
 	totalSize := int64(0)
@@ -149,15 +164,30 @@ func (ss *StorageSuite) verifyFromOffset(osi types.ObjStoreInfo, offset int64, s
 		n, err := reader.Read(buf)
 		if err == nil || err == io.EOF {
 			totalSize += int64(n)
+			if err == io.EOF {
+				break
+			}
 		}
-		if err == io.EOF {
+		if err != nil {
+			c.Logf("ObjStoreInfo(%v) failed to read data(%d, %d), current totalSize(%d), err: %v",
+				osi, 0, offset+size, totalSize, err)
 			break
 		}
+	}
+	if totalSize != offset+size {
+		c.Logf("ObjStoreInfo(%v) failed to read(%d, %d), readed %d != %d", osi, 0, offset+size, totalSize, offset+size)
 	}
 	c.Assert(totalSize, Equals, offset+size)
 	md5Sum = hasher.Sum(nil)
 	md5ReadStr := hex.EncodeToString(md5Sum[:])
+	if md5Str != md5ReadStr {
+		c.Logf("ObjStoreInfo(%v) failed to read(%d, %d), readed md5 %s != %s",
+			osi, 0, offset+size, md5ReadStr, md5Str)
+	}
 	c.Assert(md5Str, Equals, md5ReadStr)
 	err = ss.driver.Delete(ctx, ss.pool, obj, meta, totalSize)
+	if err != nil {
+		c.Logf("ObjStoreInfo(%v) failed to delete(%d, %d), err: %v", osi, 0, offset+size, err)
+	}
 	c.Assert(err, Equals, nil)
 }
