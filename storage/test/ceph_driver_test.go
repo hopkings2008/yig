@@ -196,4 +196,5 @@ func (ss *StorageSuite) verifyFromOffset(osi types.ObjStoreInfo, offset int64, s
 		c.Logf("ObjStoreInfo(%v) failed to delete(%d, %d), err: %v", osi, 0, offset+size, err)
 	}
 	c.Assert(err, Equals, nil)
+	c.Logf("succeed to check ObjStoreInfo(%v) with offset %d, size %d", osi, offset, size)
 }
