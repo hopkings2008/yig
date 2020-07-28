@@ -17,6 +17,7 @@ type StorageSuite struct {
 	chunkSize int
 	pool      string
 	driver    *storage.CephStorageDriver
+	thrId     int64
 }
 
 func (ss *StorageSuite) SetUpSuite(c *C) {

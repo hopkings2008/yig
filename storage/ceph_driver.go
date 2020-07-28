@@ -85,17 +85,6 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 			*oi, pool, objectId))
 		return 0, err
 	}
-
-	cephPool, err := csd.Conn.OpenPool(pool)
-	if err != nil {
-		csd.Logger.Error(ctx, fmt.Sprintf("failed to open pool(%s) for object(%s), err: %v",
-			pool, objectId, err))
-		return 0, err
-	}
-	defer func() {
-		cephPool.Destroy()
-	}()
-
 	// resultChan is closed by write goroutine.
 	resultChan := make(chan WriteResult)
 	// dataChan is closed by read goroutine.
@@ -104,9 +93,19 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 	// write goroutine. it must close the resultChan when it exists.
 	go func() {
 		wr := WriteResult{}
+		cephPool, err := csd.Conn.OpenPool(pool)
+		if err != nil {
+			csd.Logger.Error(ctx, fmt.Sprintf("failed to open pool(%s) for object(%s), err: %v",
+				pool, objectId, err))
+			wr.Err = err
+			wr.N = 0
+			resultChan <- wr
+			return
+		}
 		defer func() {
 			resultChan <- wr
 			close(resultChan)
+			cephPool.Destroy()
 		}()
 		for chunk := range dataChan {
 			dataSize := int64(chunk.Size)
