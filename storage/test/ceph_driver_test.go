@@ -37,7 +37,7 @@ func (ss *StorageSuite) TestCephDriverBasicWrite(c *C) {
 func (ss *StorageSuite) Test5GBasic(c *C) {
 	// change this to cpu_num * 1.5
 	numGoroutine := 4
-	len5G := int64(512 << 10)
+	len5G := int64(5 << 30)
 	chs := make(chan TestElem)
 	resultChan := make(chan TestResult)
 	//stripe object: 512K, 1M, 2M, 4M, 8M, 16M, 32M
