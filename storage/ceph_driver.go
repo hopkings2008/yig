@@ -124,8 +124,7 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 					if err == nil {
 						break
 					}
-					csd.Logger.Warn(ctx, fmt.Sprintf("failed to write %s/%s with oid(%s) and offset %d, err: %v in %d time(s)",
-						pool, objectId, oid, offset, err, retry+1))
+
 					ierr := int(err.(rados.RadosError))
 					if ierr == -110 {
 						// rados connection timeout.
@@ -137,6 +136,8 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 								pool, objectId, err))
 							break
 						}
+						csd.Logger.Warn(ctx, fmt.Sprintf("timeout to write %s/%s with oid(%s) and offset %d, err: %v in %d time(s)",
+							pool, objectId, oid, offset, err, retry+1))
 						continue
 					}
 					// if not -110 connection timeout error, break directly.
@@ -487,7 +488,7 @@ type StripeReader struct {
 	ObjectId string
 	// Offset to read
 	Offset int64
-	// Total length to read
+	// Total length to read, if Length < 0, read the whole data.
 	Length int64
 	// pool name.
 	pool string
@@ -499,7 +500,7 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 	bufLen := int64(len(p))
 	bufOffset := 0
 	for bufLen > 0 {
-		if sr.Length <= 0 {
+		if sr.Length == 0 {
 			return bufOffset, io.EOF
 		}
 		osi := sr.Mgr.GetObjectStoreInfo(sr.Offset, sr.Length)
@@ -524,11 +525,17 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 				if err != nil {
 					sr.Logger.Error(sr.Ctx, fmt.Sprintf("failed to reopen pool(%s) to read %s with offset %d, err: %v",
 						sr.pool, oid, sr.Offset, err))
-					return n, err
+					return bufOffset, err
 				}
 				sr.Logger.Warn(sr.Ctx, fmt.Sprintf("timeout to read(%s) with offset %d, retry in %d time(s)",
 					oid, sr.Offset, retry+1))
 				continue
+			}
+			// read nonexist obj, return EOF.
+			if ierr == -2 {
+				sr.Logger.Warn(sr.Ctx, fmt.Sprintf("read nonexist obj(%s) with offset %d",
+					oid, sr.Offset))
+				return bufOffset, io.EOF
 			}
 			sr.Logger.Error(sr.Ctx, fmt.Sprintf("failed to read %s with offset %d, err: %v",
 				oid, sr.Offset, err))
@@ -550,7 +557,9 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 		bufLen -= int64(n)
 		// offset for the whole input.
 		sr.Offset += int64(n)
-		sr.Length -= int64(n)
+		if sr.Length > 0 {
+			sr.Length -= int64(n)
+		}
 	}
 	return bufOffset, nil
 }

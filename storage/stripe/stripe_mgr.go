@@ -73,8 +73,9 @@ func (sm *StripeMgr) GetObjectIds(prefix string, length int64) []string {
 
 /*
 * whenever read or write, offset should be the multiple of strip unit.
-* Note: the returned Length in ObjectStoreInfo is not larger than length.
+* Note: the returned Length in ObjectStoreInfo is not larger than length if length > 0.
 * ObjectStoreInfo.Length <= length
+* if length < 0, try to read all.
 * the size of last object may not be full.
  */
 func (sm *StripeMgr) GetObjectStoreInfo(offset int64, length int64) ObjectStoreInfo {
@@ -108,7 +109,7 @@ func (sm *StripeMgr) GetObjectStoreInfo(offset int64, length int64) ObjectStoreI
 	}
 
 	// set the available buffer size according to length.
-	if osi.Length > length {
+	if length > 0 && osi.Length > length {
 		osi.Length = length
 	}
 
