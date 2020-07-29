@@ -100,12 +100,15 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 			wr.Err = err
 			wr.N = 0
 			resultChan <- wr
+			close(resultChan)
 			return
 		}
 		defer func() {
 			resultChan <- wr
 			close(resultChan)
-			cephPool.Destroy()
+			if cephPool != nil {
+				cephPool.Destroy()
+			}
 		}()
 		for chunk := range dataChan {
 			dataSize := int64(chunk.Size)
@@ -113,10 +116,32 @@ func (csd *CephStorageDriver) Write(ctx context.Context, pool string, objectId s
 			for dataSize > 0 {
 				osi := mgr.GetObjectStoreInfo(offset, dataSize)
 				oid := osi.GetObjectId(objectId)
-				//csd.Logger.Info(ctx, fmt.Sprintf("oid: %s, offset: %d", oid, offset))
 				// write data to ceph pool.
 				// note that osi.Length is the minimum size of dataSize and inner buffer.
-				err := cephPool.Write(oid, chunk.Buf[dataOffset:dataOffset+osi.Length], uint64(osi.Offset))
+				// if read too slow, write maybe timeout.
+				for retry := 0; retry < 3; retry++ {
+					err = cephPool.Write(oid, chunk.Buf[dataOffset:dataOffset+osi.Length], uint64(osi.Offset))
+					if err == nil {
+						break
+					}
+					csd.Logger.Warn(ctx, fmt.Sprintf("failed to write %s/%s with oid(%s) and offset %d, err: %v in %d time(s)",
+						pool, objectId, oid, offset, err, retry+1))
+					ierr := int(err.(rados.RadosError))
+					if ierr == -110 {
+						// rados connection timeout.
+						cephPool.Destroy()
+						cephPool = nil
+						cephPool, err = csd.Conn.OpenPool(pool)
+						if err != nil {
+							csd.Logger.Error(ctx, fmt.Sprintf("failed to open pool(%s) for object(%s), err: %v",
+								pool, objectId, err))
+							break
+						}
+						continue
+					}
+					// if not -110 connection timeout error, break directly.
+					break
+				}
 				if err != nil {
 					csd.Logger.Error(ctx, fmt.Sprintf("failed to write %s/%s with oid(%s) and offset %d, err: %v",
 						pool, objectId, oid, offset, err))
