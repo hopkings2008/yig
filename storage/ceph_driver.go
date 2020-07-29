@@ -276,6 +276,8 @@ func (csd *CephStorageDriver) Read(ctx context.Context, pool string, objectId st
 		ObjectId: objectId,
 		Offset:   offset,
 		Length:   length,
+		pool:     pool,
+		csd:      csd,
 	}
 	return sr, nil
 }
@@ -309,17 +311,36 @@ func (csd *CephStorageDriver) Delete(ctx context.Context, pool string, objectId 
 		return err
 	}
 	defer func() {
-		cephPool.Destroy()
+		if cephPool != nil {
+			cephPool.Destroy()
+		}
 	}()
 	// get all the stripe oids in ceph for this object.
 	oids := mgr.GetObjectIds(objectId, size)
 	for _, oid := range oids {
-		err = cephPool.Delete(oid)
-		if err != nil {
+		for retry := 0; retry < 3; retry++ {
+			err = cephPool.Delete(oid)
+			if err == nil {
+				break
+			}
+
 			// fix me, must filter the non-existing error.
 			ierr := int(err.(rados.RadosError))
 			if ierr == -2 {
 				err = nil
+				break
+			}
+			if ierr == -110 {
+				cephPool.Destroy()
+				cephPool = nil
+				cephPool, err = csd.Conn.OpenPool(pool)
+				if err != nil {
+					csd.Logger.Error(ctx, fmt.Sprintf("failed to open pool(%s) for object(%s), err: %v",
+						pool, objectId, err))
+					return err
+				}
+				csd.Logger.Warn(ctx, fmt.Sprintf("timeout to delete(%s/%s), retry at %d time",
+					pool, objectId, retry+1))
 				continue
 			}
 			csd.Logger.Error(ctx, fmt.Sprintf("failed to delete(%s) for %s, err: %v", oid, objectId, err))
@@ -468,6 +489,10 @@ type StripeReader struct {
 	Offset int64
 	// Total length to read
 	Length int64
+	// pool name.
+	pool string
+	// parent CephStorageDriver
+	csd *CephStorageDriver
 }
 
 func (sr *StripeReader) Read(p []byte) (int, error) {
@@ -483,8 +508,28 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 		if toRead > bufLen {
 			toRead = bufLen
 		}
-		n, err := sr.CephPool.Read(oid, p[bufOffset:int64(bufOffset)+toRead], uint64(osi.Offset))
-		if err != nil {
+		var n int
+		var err error
+		for retry := 0; retry < 3; retry++ {
+			n, err = sr.CephPool.Read(oid, p[bufOffset:int64(bufOffset)+toRead], uint64(osi.Offset))
+			if err == nil {
+				break
+			}
+
+			ierr := int(err.(rados.RadosError))
+			if ierr == -110 {
+				sr.CephPool.Destroy()
+				sr.CephPool = nil
+				sr.CephPool, err = sr.csd.Conn.OpenPool(sr.pool)
+				if err != nil {
+					sr.Logger.Error(sr.Ctx, fmt.Sprintf("failed to reopen pool(%s) to read %s with offset %d, err: %v",
+						sr.pool, oid, sr.Offset, err))
+					return n, err
+				}
+				sr.Logger.Warn(sr.Ctx, fmt.Sprintf("timeout to read(%s) with offset %d, retry in %d time(s)",
+					oid, sr.Offset, retry+1))
+				continue
+			}
 			sr.Logger.Error(sr.Ctx, fmt.Sprintf("failed to read %s with offset %d, err: %v",
 				oid, sr.Offset, err))
 			return n, err
@@ -511,6 +556,8 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 }
 
 func (sr *StripeReader) Close() error {
-	sr.CephPool.Destroy()
+	if sr.CephPool != nil {
+		sr.CephPool.Destroy()
+	}
 	return nil
 }
