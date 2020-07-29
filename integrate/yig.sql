@@ -255,3 +255,11 @@ ALTER TABLE objects ADD COLUMN islatest tinyint(1) DEFAULT 1 AFTER storageclass;
 ALTER TABLE objects ADD KEY listkey (bucketname,name,islatest,deletemarker);
 /* NOTE: it should be set for tidb before 3.0.8. */
 /* set @@global.tidb_disable_txn_auto_retry=1; */
+
+/* Update key length to 1024. */
+ALTER TABLE gc MODIFY objectname varchar(1024) DEFAULT NULL;
+ALTER TABLE gcpart MODIFY objectname varchar(1024) DEFAULT NULL;
+ALTER TABLE multiparts MODIFY objectname varchar(1024) DEFAULT NULL;
+ALTER TABLE multipartpart MODIFY objectname varchar(1024) DEFAULT NULL;
+ALTER TABLE objectpart MODIFY objectname varchar(1024) DEFAULT NULL;
+ALTER TABLE objects MODIFY name varchar(1024) DEFAULT NULL;
