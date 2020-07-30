@@ -90,7 +90,6 @@ func RequestIdFromContext(ctx context.Context) string {
 var (
 	validBucketName       = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9\.\-\_\:]{1,61}[A-Za-z0-9]$`)
 	validBucketNameStrict = regexp.MustCompile(`^[a-z0-9][a-z0-9\.\-]{1,61}[a-z0-9]$`)
-	ipAddress             = regexp.MustCompile(`^(\d+\.){3}\d+$`)
 )
 
 // Common checker for both stricter and basic validation.
@@ -103,9 +102,6 @@ func checkBucketNameCommon(bucketName string, strict bool) (err error) {
 	}
 	if len(bucketName) > 63 {
 		return errors.New("Bucket name cannot be greater than 63 characters")
-	}
-	if ipAddress.MatchString(bucketName) {
-		return errors.New("Bucket name cannot be an ip address")
 	}
 	if strings.Contains(bucketName, "..") {
 		return errors.New("Bucket name contains invalid characters")
