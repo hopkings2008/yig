@@ -49,7 +49,7 @@ func (m *Meta) GetObject(ctx context.Context, bucketName string, objectName stri
 }
 
 func (m *Meta) GetAllObject(bucketName string, objectName string) (object []*Object, err error) {
-	return m.Client.GetAllObject(bucketName, objectName, "")
+	return m.Client.GetAllObject(bucketName, objectName, "", 0)
 }
 
 func (m *Meta) GetObjectVersion(ctx context.Context, bucketName, objectName, version string, willNeed bool) (object *Object, err error) {
@@ -84,7 +84,7 @@ func (m *Meta) GetObjectVersion(ctx context.Context, bucketName, objectName, ver
 	return object, nil
 }
 
-func (m *Meta) PutObject(ctx context.Context, object *Object, multipart *Multipart, updateUsage bool) error {
+func (m *Meta) PutObject(ctx context.Context, object *Object, multipart *Multipart, updateUsage bool, isBucketVersioning bool) error {
 	tstart := time.Now()
 	tx, err := m.Client.NewTrans()
 	defer func() {
@@ -92,6 +92,12 @@ func (m *Meta) PutObject(ctx context.Context, object *Object, multipart *Multipa
 			m.Client.AbortTrans(tx)
 		}
 	}()
+
+	err = m.Client.UpdateLastLatestToFalse(ctx, object, tx)
+	if err != nil {
+		helper.Logger.Error(ctx, err)
+		return err
+	}
 
 	err = m.Client.PutObject(object, tx)
 	if err != nil {
@@ -152,7 +158,7 @@ func (m *Meta) UpdateObjectAttrs(object *Object) error {
 	return err
 }
 
-func (m *Meta) DeleteObject(ctx context.Context, object *Object, DeleteMarker bool) error {
+func (m *Meta) DeleteObject(ctx context.Context, object *Object, DeleteMarker bool, isBucketVersioning bool) error {
 	tx, err := m.Client.NewTrans()
 	defer func() {
 		if err == nil {
@@ -166,6 +172,14 @@ func (m *Meta) DeleteObject(ctx context.Context, object *Object, DeleteMarker bo
 	err = m.Client.DeleteObject(object, tx)
 	if err != nil {
 		return err
+	}
+
+	if object.IsLatest {
+		// If the deleted object is latest, update last object as latest.
+		err = m.Client.UpdateLastLatestToTrue(ctx, object, tx)
+		if err != nil {
+			return err
+		}
 	}
 
 	if DeleteMarker {

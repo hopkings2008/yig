@@ -22,6 +22,7 @@ build_yig:
     - make run
     - chmod 644 go.mod go.sum
     - python test/sanity.py
+    - python test/versioning.py
     - pushd test/go
     - go test -v
     - popd

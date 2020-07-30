@@ -625,10 +625,14 @@ func (yig *YigStorage) PutObject(ctx context.Context, bucketName string, objectN
 	// Delete old object if necessary.
 	if err = yig.checkOldObject(ctx, bucketName, objectName, bucket.Versioning); err != nil {
 		RecycleQueue <- maybeObjectToRecycle
+		helper.Logger.Error(ctx, err)
+		err = ErrInternalError
 		return
 	}
-	if err = yig.MetaStorage.PutObject(ctx, object, nil, true); err != nil {
+	if err = yig.MetaStorage.PutObject(ctx, object, nil, true, bucket.IsVersioning()); err != nil {
 		RecycleQueue <- maybeObjectToRecycle
+		helper.Logger.Error(ctx, err)
+		err = ErrInternalError
 		return
 	}
 
@@ -984,7 +988,7 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 		return
 	}
 
-	if err = yig.MetaStorage.PutObject(ctx, targetObject, nil, true); err != nil {
+	if err = yig.MetaStorage.PutObject(ctx, targetObject, nil, true, bucket.IsVersioning()); err != nil {
 		RecycleQueue <- maybeObjectToRecycle
 		return
 	}
@@ -998,9 +1002,9 @@ func (yig *YigStorage) CopyObject(ctx context.Context, targetObject *meta.Object
 	return result, nil
 }
 
-func (yig *YigStorage) removeByObject(ctx context.Context, object *meta.Object) (err error) {
+func (yig *YigStorage) removeByObject(ctx context.Context, object *meta.Object, isVersioning bool) (err error) {
 	yig.Logger.Info(ctx, "removeByObject")
-	err = yig.MetaStorage.DeleteObject(ctx, object, object.DeleteMarker)
+	err = yig.MetaStorage.DeleteObject(ctx, object, object.DeleteMarker, isVersioning)
 	if err != nil {
 		yig.Logger.Error(ctx, "removeByObject", err)
 		return
@@ -1016,7 +1020,7 @@ func (yig *YigStorage) getObjWithVersion(ctx context.Context, bucketName, object
 
 }
 
-func (yig *YigStorage) removeAllObjectsEntryByName(ctx context.Context, bucketName, objectName string) (err error) {
+func (yig *YigStorage) removeAllObjectsEntryByName(ctx context.Context, bucketName, objectName string, isVersioning bool) (err error) {
 
 	objs, err := yig.MetaStorage.GetAllObject(bucketName, objectName)
 	if err == ErrNoSuchKey {
@@ -1026,7 +1030,7 @@ func (yig *YigStorage) removeAllObjectsEntryByName(ctx context.Context, bucketNa
 		return err
 	}
 	for _, obj := range objs {
-		err = yig.removeByObject(ctx, obj)
+		err = yig.removeByObject(ctx, obj, isVersioning)
 		if err != nil {
 			return err
 		}
@@ -1038,7 +1042,7 @@ func (yig *YigStorage) checkOldObject(ctx context.Context, bucketName, objectNam
 	switch versioning {
 	case meta.VersionDisabled:
 		// Delete all the bucketName + objectName.
-		return yig.removeAllObjectsEntryByName(ctx, bucketName, objectName) // TODO: not deleted.
+		return yig.removeAllObjectsEntryByName(ctx, bucketName, objectName, false) // TODO: not deleted.
 
 	case meta.VersionEnabled:
 		// Do nothing.
@@ -1053,7 +1057,7 @@ func (yig *YigStorage) checkOldObject(ctx context.Context, bucketName, objectNam
 			return err
 		}
 
-		return yig.MetaStorage.DeleteObject(ctx, object, object.DeleteMarker)
+		return yig.MetaStorage.DeleteObject(ctx, object, object.DeleteMarker, true)
 
 	default:
 		return errors.New("No Such versioning status!")
@@ -1062,7 +1066,7 @@ func (yig *YigStorage) checkOldObject(ctx context.Context, bucketName, objectNam
 	return nil
 }
 
-func (yig *YigStorage) removeObjectVersion(ctx context.Context, bucketName, objectName, version string) error {
+func (yig *YigStorage) removeObjectVersion(ctx context.Context, bucketName, objectName, version string, isVersioning bool) error {
 	object, err := yig.getObjWithVersion(ctx, bucketName, objectName, version)
 	if err == ErrNoSuchKey {
 		return nil
@@ -1071,7 +1075,7 @@ func (yig *YigStorage) removeObjectVersion(ctx context.Context, bucketName, obje
 		return err
 	}
 
-	err = yig.removeByObject(ctx, object)
+	err = yig.removeByObject(ctx, object, isVersioning)
 	if err != nil {
 		helper.Logger.Error(ctx, "removeObjectVersion: after removeByObject", err)
 		return err
@@ -1092,7 +1096,7 @@ func (yig *YigStorage) addDeleteMarker(ctx context.Context, bucket *meta.Bucket,
 		DeleteMarker:     true,
 	}
 
-	err = yig.MetaStorage.PutObject(ctx, deleteMarker, nil, false)
+	err = yig.MetaStorage.PutObject(ctx, deleteMarker, nil, false, bucket.IsVersioning())
 	versionId = deleteMarker.GetVersionId()
 
 	return
@@ -1129,9 +1133,11 @@ func (yig *YigStorage) DeleteObject(ctx context.Context, bucketName string, obje
 	switch bucket.Versioning {
 	case meta.VersionDisabled:
 		if version != "" && version != "null" {
+			helper.Logger.Error(ctx, "Invalid input version id for bucket:", 
+				bucketName, "Versioning:", bucket.Versioning, "version id:", version)
 			return result, ErrNoSuchVersion
 		}
-		err = yig.removeAllObjectsEntryByName(ctx, bucketName, objectName)
+		err = yig.removeAllObjectsEntryByName(ctx, bucketName, objectName, false)
 		if err != nil {
 			return
 		}
@@ -1144,7 +1150,7 @@ func (yig *YigStorage) DeleteObject(ctx context.Context, bucketName string, obje
 			}
 			result.DeleteMarker = true
 		} else {
-			err = yig.removeObjectVersion(ctx, bucketName, objectName, version)
+			err = yig.removeObjectVersion(ctx, bucketName, objectName, version, true)
 			if err != nil {
 				return
 			}
@@ -1153,7 +1159,7 @@ func (yig *YigStorage) DeleteObject(ctx context.Context, bucketName string, obje
 	case meta.VersionSuspended:
 		// https://docs.aws.amazon.com/AmazonS3/latest/dev/DeletingObjectsfromVersioningSuspendedBuckets.html
 		if version == "" {
-			err = yig.removeObjectVersion(ctx, bucketName, objectName, "null")
+			err = yig.removeObjectVersion(ctx, bucketName, objectName, "null", true)
 			if err != nil {
 				return
 			}
@@ -1163,7 +1169,7 @@ func (yig *YigStorage) DeleteObject(ctx context.Context, bucketName string, obje
 			}
 			result.DeleteMarker = true
 		} else {
-			err = yig.removeObjectVersion(ctx, bucketName, objectName, version)
+			err = yig.removeObjectVersion(ctx, bucketName, objectName, version, true)
 			if err != nil {
 				return
 			}
