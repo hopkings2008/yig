@@ -25,7 +25,7 @@ func (ss *StorageSuite) SetUpSuite(c *C) {
 	helper.Logger = log.NewFileLogger("/var/log/yig/ceph_test.log", logLevel)
 	// the test chunk is 256MB
 	ss.chunkSize = 256 << 20
-	ss.pool = "tiger"
+	ss.pool = "stripe"
 	var err error
 	ss.driver, err = storage.NewCephStorageDriver("/etc/ceph/ceph.conf", helper.Logger)
 	c.Assert(err, Equals, nil)

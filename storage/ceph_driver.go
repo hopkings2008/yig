@@ -539,8 +539,9 @@ func (sr *StripeReader) Read(p []byte) (int, error) {
 			}
 			sr.Logger.Error(sr.Ctx, fmt.Sprintf("failed to read %s with offset %d, err: %v",
 				oid, sr.Offset, err))
-			return n, err
+			return bufOffset, err
 		}
+
 		if n == 0 {
 			return bufOffset, io.EOF
 		}
