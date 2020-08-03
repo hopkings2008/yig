@@ -715,6 +715,8 @@ func (yig *YigStorage) AppendObject(ctx context.Context, bucketName string, obje
 		oldVersionId = objInfo.VersionId
 		helper.Logger.Info(ctx, "request append oid:", oid, "iv:", initializationVector, "size:", objSize)
 		isNewObj = false
+		// set the original storage meta info.
+		storeMeta = objInfo.Meta
 	} else {
 		// New appendable object
 		cephCluster, poolName, storeMeta = yig.PickOneClusterAndPool(ctx, bucketName, objectName, size, true)
