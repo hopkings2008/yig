@@ -37,6 +37,8 @@ type ObjectLayer interface {
 	SetBucketAcl(ctx context.Context, bucket string, policy datatype.AccessControlPolicy, acl datatype.Acl,
 		credential common.Credential) error
 	GetBucketAcl(ctx context.Context, bucket string, credential common.Credential) (datatype.AccessControlPolicyResponse, error)
+	SetBucketLogging(ctx context.Context, bucket *meta.Bucket, config datatype.BucketLoggingStatus, credential common.Credential) error
+	GetBucketLogging(ctx context.Context, bucket *meta.Bucket, credential common.Credential) (datatype.BucketLoggingStatus, error)
 	SetBucketCors(ctx context.Context, bucket string, cors datatype.Cors, credential common.Credential) error
 	SetBucketVersioning(ctx context.Context, bucket string, versioning datatype.Versioning, credential common.Credential) error
 	DeleteBucketCors(ctx context.Context, bucket string, credential common.Credential) error
