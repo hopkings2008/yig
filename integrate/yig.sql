@@ -255,3 +255,7 @@ ALTER TABLE objects ADD COLUMN islatest tinyint(1) DEFAULT 1 AFTER storageclass;
 ALTER TABLE objects ADD KEY listkey (bucketname,name,islatest,deletemarker);
 /* NOTE: it should be set for tidb before 3.0.8. */
 /* set @@global.tidb_disable_txn_auto_retry=1; */
+
+/* bucket logging */
+ALTER TABLE buckets 
+ADD COLUMN logging JSON DEFAULT NULL AFTER cors;
