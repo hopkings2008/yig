@@ -17,11 +17,11 @@
 package api
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
-	"fmt"
 )
 
 // validBucket regexp.
@@ -44,10 +44,14 @@ func isValidBucketName(bucketName string) bool {
 	if len(split) == 4 {
 		for _, p := range split {
 			n, err := strconv.Atoi(p)
-			if err == nil && n >= 0 && n <= 255 {
-				return false
+			if err != nil {
+				return true
+			}
+			if n < 0 || n > 255 {
+				return true
 			}
 		}
+		return false
 	}
 	return true
 }
