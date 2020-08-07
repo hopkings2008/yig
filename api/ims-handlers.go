@@ -252,7 +252,7 @@ func (api ObjectAPIHandlers) getObjectInfoFromReq(ctx context.Context, bucketNam
 	// check the auth
 	var credential common.Credential
 	var err error
-	if credential, err = checkRequestAuth(api, r, policy.GetObjectAction, bucketName, objectName); err != nil {
+	if credential, err = checkRequestAuth(r, policy.GetObjectAction); err != nil {
 		helper.Logger.Error(ctx, fmt.Sprintf("failed to check auth for (%s/%s), err: %v", bucketName, objectName, err))
 		return nil, err
 	}
@@ -264,9 +264,6 @@ func (api ObjectAPIHandlers) getObjectInfoFromReq(ctx context.Context, bucketNam
 	if err != nil {
 		helper.Logger.Error(ctx, fmt.Sprintf("failed to get object info for (%s/%s), err: %v",
 			bucketName, objectName, err))
-		if err == errs.ErrNoSuchKey {
-			err = api.errAllowableObjectNotFound(r, bucketName, credential)
-		}
 		return nil, err
 	}
 
