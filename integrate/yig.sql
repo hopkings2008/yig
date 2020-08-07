@@ -29,7 +29,6 @@ CREATE TABLE `buckets` (
   `lc` JSON DEFAULT NULL,
   `uid` varchar(255) DEFAULT NULL,
   `policy` JSON DEFAULT NULL,
-  `website` JSON DEFAULT NULL,
   `createtime` datetime DEFAULT NULL,
   `usages` bigint(20) DEFAULT NULL,
   `versioning` varchar(255) DEFAULT NULL,
@@ -254,7 +253,7 @@ ALTER TABLE objects ADD COLUMN islatest tinyint(1) DEFAULT 1 AFTER storageclass;
 /* NOTE: ADD INDEX IS SLOW. */
 ALTER TABLE objects ADD KEY listkey (bucketname,name,islatest,deletemarker);
 /* NOTE: it should be set for tidb before 3.0.8. */
-/* set @@global.tidb_disable_txn_auto_retry=1; */
+set @@global.tidb_disable_txn_auto_retry=1;
 
 /* bucket logging */
 ALTER TABLE buckets 
@@ -266,3 +265,12 @@ CREATE TABLE `configure` (
     `config`        JSON DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+/* Update key length to 1024. */
+ALTER TABLE gc MODIFY objectname varchar(1024) DEFAULT NULL;
+ALTER TABLE gcpart MODIFY objectname varchar(1024) DEFAULT NULL;
+ALTER TABLE multiparts MODIFY objectname varchar(1024) DEFAULT NULL;
+ALTER TABLE multipartpart MODIFY objectname varchar(1024) DEFAULT NULL;
+ALTER TABLE objectpart MODIFY objectname varchar(1024) DEFAULT NULL;
+ALTER TABLE objects MODIFY name varchar(1024) DEFAULT NULL;
+
+ALTER TABLE buckets ADD COLUMN website JSON DEFAULT NULL AFTER policy;
