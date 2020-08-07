@@ -180,8 +180,8 @@ func (b Bucket) GetCreateSql() (string, []interface{}) {
 	website, _ := json.Marshal(b.Website)
 	createTime := b.CreateTime.Format(TIME_LAYOUT_TIDB)
 	logging, _ := json.Marshal(b.BucketLogging)
-	sql := "insert into buckets(bucketname,acl,cors,logging,lc,uid,policy,website,createtime,usages,versioning) " + "values(?,?,?,?,?,?,?,?,?,?,?);"
-	args := []interface{}{b.Name, acl, cors, logging, lc, b.OwnerId, bucket_policy, website, createTime, b.Usage, b.Versioning}
+	sql := "insert into buckets(bucketname,acl,cors,logging,lc,uid,policy,website,createtime,usages,fileNum,versioning) " + "values(?,?,?,?,?,?,?,?,?,?,?,?);"
+	args := []interface{}{b.Name, acl, cors, logging, lc, b.OwnerId, bucket_policy, website, createTime, b.Usage, b.FileNum, b.Versioning}
 	return sql, args
 }
 
