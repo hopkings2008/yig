@@ -33,6 +33,7 @@ type Client interface {
 	UpdateUsage(bucketName string, size int64, tx interface{}) error
 	UpdateBucketInfo(usages map[string]*BucketInfo, tx interface{}) error
 	GetAllBucketInfo() (map[string]*BucketInfo, error)
+	IsEmptyBucket(ctx context.Context, bucketName string) (isEmpty bool, err error)
 
 	//multipart
 	GetMultipart(bucketName, objectName, uploadId string) (multipart Multipart, err error)

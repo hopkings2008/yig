@@ -21,7 +21,8 @@ import (
 const (
 	SCAN_HBASE_LIMIT    = 50
 	DEFAULT_LC_LOG_PATH = "/var/log/yig/lc.log"
-	DEFAULT_LC_SLEEP_INTERVAL_HOUR     = 1 //TODO 24
+	DEFAULT_LC_SLEEP_INTERVAL_MINUTE     = 60 //TODO, sleep 60 min if all scan finished.
+	DEFAULT_LC_INTERRUPTIBLE_SLEEP_INTERVAL_SECOND	= 5 // TODO, sleep 5s and check stop.
 )
 
 var (
@@ -38,9 +39,10 @@ func getLifeCycles() {
 	helper.Logger.Info(nil, "all bucket lifecycle handle start")
 	waitgroup.Add(1)
 	defer waitgroup.Done()
+	defer close(taskQ)
 	for {
 		if stop {
-			helper.Logger.Info(nil, ".")
+			helper.Logger.Info(nil, "getLifeCycles stopped.")
 			return
 		}
 
@@ -49,7 +51,13 @@ func getLifeCycles() {
 		result, err := yig.MetaStorage.ScanLifeCycle(nil, SCAN_HBASE_LIMIT, marker)
 		if err != nil {
 			helper.Logger.Error(nil, "ScanLifeCycle failed, err: ", err, "Sleep and retry.")
-			time.Sleep(DEFAULT_LC_SLEEP_INTERVAL_HOUR * time.Hour)
+			sleepStartTime := time.Now().UTC()
+			for time.Since(sleepStartTime).Minutes() < DEFAULT_LC_SLEEP_INTERVAL_MINUTE {
+				if stop {
+					break
+				}
+				time.Sleep(time.Duration(DEFAULT_LC_INTERRUPTIBLE_SLEEP_INTERVAL_SECOND)*time.Second)
+			}
 			continue
 		}
 
@@ -61,7 +69,13 @@ func getLifeCycles() {
 		if result.Truncated == false {
 			marker = ""
 			helper.Logger.Info(nil, "Sleep after ScanLifeCycle returned len:", len(result.Lcs), "Truncated:", result.Truncated)
-			time.Sleep(DEFAULT_LC_SLEEP_INTERVAL_HOUR * time.Hour)
+			sleepStartTime := time.Now().UTC()
+			for time.Since(sleepStartTime).Minutes() < DEFAULT_LC_SLEEP_INTERVAL_MINUTE {
+				if stop {
+					break
+				}
+				time.Sleep(time.Duration(DEFAULT_LC_INTERRUPTIBLE_SLEEP_INTERVAL_SECOND)*time.Second)
+			}
 		}
 	}
 
@@ -216,13 +230,10 @@ func retrieveBucket(lc types.LifeCycle) error {
 
 func processLifecycle() {
 	time.Sleep(time.Second * 1)
-	for {
+	for item := range taskQ {
 		if stop {
-			helper.Logger.Info(nil, ".")
-			return
+			continue
 		}
-
-		item := <-taskQ
 		waitgroup.Add(1)
 		err := retrieveBucket(item)
 		if err != nil {
@@ -230,6 +241,7 @@ func processLifecycle() {
 		}
 		waitgroup.Done()
 	}
+	helper.Logger.Info(nil, "processLifecycle exit.")
 }
 
 func main() {
