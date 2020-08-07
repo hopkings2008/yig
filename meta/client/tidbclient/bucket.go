@@ -15,16 +15,23 @@ import (
 )
 
 func (t *TidbClient) GetBucket(bucketName string) (bucket *Bucket, err error) {
+<<<<<<< HEAD
 	var acl, cors, lc, policy, createTime string
 	var updateTime sql.NullString
 	var website sql.NullString
 
 	sqltext := "select bucketname,acl,cors,lc,uid,policy,createtime,usages,versioning,update_time,website from buckets where bucketname=?;"
+=======
+	var acl, cors, logging, lc, policy, website, createTime string
+	var updateTime sql.NullString
+	sqltext := "select bucketname,acl,cors,COALESCE(logging,\"\"),lc,uid,policy,createtime,usages,versioning,update_time,website from buckets where bucketname=?;"
+>>>>>>> 08bbf9ee96a19e643b55a78f6b5b7e0487e059bb
 	tmp := &Bucket{}
 	err = t.Client.QueryRow(sqltext, bucketName).Scan(
 		&tmp.Name,
 		&acl,
 		&cors,
+		&logging,
 		&lc,
 		&tmp.OwnerId,
 		&policy,
@@ -50,6 +57,10 @@ func (t *TidbClient) GetBucket(bucketName string) (bucket *Bucket, err error) {
 		return
 	}
 	err = json.Unmarshal([]byte(cors), &tmp.CORS)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal([]byte(logging), &tmp.BucketLogging)
 	if err != nil {
 		return
 	}
@@ -81,7 +92,7 @@ func (t *TidbClient) GetBucket(bucketName string) (bucket *Bucket, err error) {
 }
 
 func (t *TidbClient) GetBuckets() (buckets []*Bucket, err error) {
-	sqltext := "select bucketname,acl,cors,lc,uid,policy,createtime,usages,versioning,update_time,website from buckets;"
+	sqltext := "select bucketname,acl,cors,COALESCE(logging,\"\"),lc,uid,policy,createtime,usages,versioning,update_time,website from buckets;"
 	rows, err := t.Client.Query(sqltext)
 	if err == sql.ErrNoRows {
 		err = nil
@@ -93,7 +104,7 @@ func (t *TidbClient) GetBuckets() (buckets []*Bucket, err error) {
 
 	for rows.Next() {
 		var tmp Bucket
-		var acl, cors, lc, policy, createTime string
+		var acl, cors, logging, lc, policy, createTime string
 		var updateTime sql.NullString
 		var website sql.NullString
 
@@ -101,6 +112,7 @@ func (t *TidbClient) GetBuckets() (buckets []*Bucket, err error) {
 			&tmp.Name,
 			&acl,
 			&cors,
+			&logging,
 			&lc,
 			&tmp.OwnerId,
 			&policy,
@@ -125,6 +137,10 @@ func (t *TidbClient) GetBuckets() (buckets []*Bucket, err error) {
 			return
 		}
 		err = json.Unmarshal([]byte(lc), &tmp.LC)
+		if err != nil {
+			return
+		}
+		err = json.Unmarshal([]byte(logging), &tmp.BucketLogging)
 		if err != nil {
 			return
 		}
@@ -388,7 +404,7 @@ func (t *TidbClient) ListObjectsVersionedBucket(ctx context.Context, bucketName,
 		if marker != "" {
 			if !versioned {
 				// list objects.
-				if len(retObjects) > 0 && retObjects[len(retObjects) - 1].Name == marker {
+				if len(retObjects) > 0 && retObjects[len(retObjects)-1].Name == marker {
 					sqltext += " and name > ?"
 				} else {
 					sqltext += " and name >= ?" // For jumped from delimiter branch.
@@ -569,7 +585,7 @@ func (t *TidbClient) ListObjectVersionsWithDelimiter(ctx context.Context, bucket
 
 	helper.Logger.Info(ctx, "input:", bucketName, marker, verIdMarker, prefix, delimiter, maxKeys, rawVersionIdMarker)
 
-	for i :=0; i < 2; i++ { // To avoid dead loop.
+	for i := 0; i < 2; i++ { // To avoid dead loop.
 		var loopcount int
 		var sqltext string
 		var rows *sql.Rows

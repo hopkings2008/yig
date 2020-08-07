@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 var client = &http.Client{}
@@ -26,6 +28,7 @@ func printHelp() {
 	fmt.Println(" -b, --bucket   Specify bucket to operate")
 	fmt.Println(" -u, --uid      Specify user name to operate")
 	fmt.Println(" -o, --object   Specify object to operate")
+	fmt.Println(" -r, --region   Specify region id to operator")
 }
 
 func isParaEmpty(p string) bool {
@@ -212,6 +215,35 @@ func getCacheHit() {
 
 }
 
+func setRegion(region string) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{})
+
+	tokenString, err := token.SignedString([]byte(config.AdminKey))
+
+	if err == nil {
+		//go use token
+		fmt.Printf("\nHS256 = %v\n", tokenString)
+	} else {
+		fmt.Println("internal error", err)
+		return
+	}
+	url := config.RequestUrl + "/admin/region"
+	str := fmt.Sprintf(`{"region":"%s"}`, region)
+	request, _ := http.NewRequest("POST", url, strings.NewReader(str))
+	request.Header.Set("Authorization", "Bearer "+tokenString)
+	request.Header.Set("Content-Type", "application/json")
+
+	response, err := client.Do(request)
+	if err != nil {
+		fmt.Println("Set region request failed ", err)
+		return
+	}
+	if response.StatusCode != 200 && response.StatusCode != 204 {
+		fmt.Println("setRegion failed as status != 200", response.StatusCode)
+		return
+	}
+}
+
 func main() {
 	f, err := os.Open("./admin.json")
 	if err != nil {
@@ -231,6 +263,7 @@ func main() {
 	bucket := mySet.String("b", "", "bucket name")
 	uid := mySet.String("u", "", "user name")
 	object := mySet.String("o", "", "object name")
+	region := mySet.String("r", "", "region id")
 	mySet.Parse(os.Args[2:])
 	fmt.Println("command:", os.Args[1], "bucket:", *bucket, "user:", *uid, "object:", *object)
 	switch os.Args[1] {
@@ -244,6 +277,8 @@ func main() {
 		getObjectInfo(*bucket, *object)
 	case "cachehit":
 		getCacheHit()
+	case "region":
+		setRegion(*region)
 	default:
 		printHelp()
 		return

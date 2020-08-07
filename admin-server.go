@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -130,6 +131,29 @@ func getCacheHitRatio(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func setRegion(w http.ResponseWriter, r *http.Request) {
+	var configure meta.Configure
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		helper.ErrorIf(err, "read body failed to set region")
+		api.WriteErrorResponse(w, r, err)
+		return
+	}
+	err = json.Unmarshal(body, &configure)
+	if err != nil {
+		helper.ErrorIf(err, "parse body failed to set region")
+		api.WriteErrorResponse(w, r, err)
+		return
+	}
+	err = adminServer.Yig.MetaStorage.SetRegion(configure.Region)
+	if err != nil {
+		api.WriteErrorResponse(w, r, err)
+		return
+	}
+	api.WriteSuccessNoContent(w)
+}
+
 var handlerFns = []handlerFunc{
 	//	SetJwtMiddlewareHandler,
 }
@@ -152,6 +176,7 @@ func configureAdminHandler() http.Handler {
 	admin.Methods("GET").Path("/bucket").HandlerFunc(SetJwtMiddlewareFunc(getBucketInfo))
 	admin.Methods("GET").Path("/object").HandlerFunc(SetJwtMiddlewareFunc(getObjectInfo))
 	admin.Methods("GET").Path("/cachehit").HandlerFunc(SetJwtMiddlewareFunc(getCacheHitRatio))
+	admin.Methods("POST").Path("/region").HandlerFunc(SetJwtMiddlewareFunc(setRegion))
 
 	metrics := NewMetrics("yig")
 	registry := prometheus.NewRegistry()

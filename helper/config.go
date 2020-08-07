@@ -2,6 +2,7 @@ package helper
 
 import (
 	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -9,6 +10,7 @@ import (
 
 const (
 	YIG_CONF_PATH             = "/etc/yig/yig.toml"
+	YIG_UUID_CONF_PATH        = "/etc/yig/uuid"
 	MIN_DOWNLOAD_BUFPOOL_SIZE = 512 << 10 // 512k
 	MAX_DOWNLOAD_BUFPOOL_SIZE = 8 << 20   // 8M
 )
@@ -120,6 +122,7 @@ var CONFIG Config
 
 func SetupConfig() {
 	MarshalTOMLConfig()
+	InitUUID()
 }
 
 func MarshalTOMLConfig() error {
@@ -158,8 +161,8 @@ func MarshalTOMLConfig() error {
 	CONFIG.ReservedOrigins = c.ReservedOrigins
 	CONFIG.TidbInfo = c.TidbInfo
 	CONFIG.KeepAlive = c.KeepAlive
-	CONFIG.InstanceId = Ternary(c.InstanceId == "",
-		string(GenerateRandomId()), c.InstanceId).(string)
+	//	CONFIG.InstanceId = Ternary(c.InstanceId == "",
+	//		string(GenerateRandomId()), c.InstanceId).(string)
 	CONFIG.ConcurrentRequestLimit = Ternary(c.ConcurrentRequestLimit == 0,
 		10000, c.ConcurrentRequestLimit).(int)
 	CONFIG.HbaseZnodeParent = Ternary(c.HbaseZnodeParent == "",
@@ -205,4 +208,29 @@ func MarshalTOMLConfig() error {
 
 	CONFIG.IAMCacheExpireTime = Ternary(c.IAMCacheExpireTime < 0, 600, c.IAMCacheExpireTime).(int)
 	return nil
+}
+
+func InitUUID() bool {
+	f, err := os.OpenFile(YIG_UUID_CONF_PATH, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	uuid, err := ioutil.ReadAll(f)
+	if err != nil {
+		return false
+	}
+	if len(uuid) == 0 {
+		CONFIG.InstanceId = string(GenerateRandomId())
+		_, err := f.Write([]byte(CONFIG.InstanceId))
+		if err != nil {
+			return false
+		}
+		return true
+	}
+	if len(CONFIG.InstanceId) != 0 && CONFIG.InstanceId != string(uuid) {
+		return false
+	}
+	CONFIG.InstanceId = string(uuid)
+	return true
 }
