@@ -446,7 +446,7 @@ func (yig *YigStorage) DeleteBucket(ctx context.Context, bucketName string, cred
 	}
 
 	// Check if bucket is empty
-	objs, _, _, _, _, err := yig.MetaStorage.Client.ListObjects(ctx, bucketName, "", "", "", "", false, 1, true)
+	objs, _, _, _, _, err := yig.MetaStorage.Client.ListObjects(ctx, bucketName, "", "", "", "", false, 1, true, bucket.IsVersioning())
 	if err != nil {
 		yig.Logger.Error(ctx, err)
 		return err
@@ -483,20 +483,20 @@ func (yig *YigStorage) DeleteBucket(ctx context.Context, bucketName string, cred
 }
 
 // Without delete-marker.
-func (yig *YigStorage) ListObjectsInternal(ctx context.Context, bucketName string,
+func (yig *YigStorage) ListObjectsInternal(ctx context.Context, bucket *types.Bucket,
 	request datatype.ListObjectsRequest) (retObjects []*types.Object, prefixes []string, truncated bool,
 	nextMarker, nextVerIdMarker string, err error) {
-	return yig.ListObjectsInternalCore(ctx, bucketName, request, false)
+	return yig.ListObjectsInternalCore(ctx, bucket.Name, request, false, bucket.IsVersioning())
 }
 
-func (yig *YigStorage) ListObjectsInternalWithDeleteMarker(ctx context.Context, bucketName string,
+func (yig *YigStorage) ListObjectsInternalWithDeleteMarker(ctx context.Context, bucket *types.Bucket,
 	request datatype.ListObjectsRequest) (retObjects []*types.Object, prefixes []string, truncated bool,
 	nextMarker, nextVerIdMarker string, err error) {
-	return yig.ListObjectsInternalCore(ctx, bucketName, request, true)
+	return yig.ListObjectsInternalCore(ctx, bucket.Name, request, true, bucket.IsVersioning())
 }
 
 func (yig *YigStorage) ListObjectsInternalCore(ctx context.Context, bucketName string,
-	request datatype.ListObjectsRequest, withDeleteMarker bool) (retObjects []*types.Object, prefixes []string, truncated bool,
+	request datatype.ListObjectsRequest, withDeleteMarker bool, isVersioning bool) (retObjects []*types.Object, prefixes []string, truncated bool,
 	nextMarker, nextVerIdMarker string, err error) {
 	var marker string
 	var verIdMarker string
@@ -519,8 +519,8 @@ func (yig *YigStorage) ListObjectsInternalCore(ctx context.Context, bucketName s
 	yig.Logger.Info(ctx, "Prefix:", request.Prefix, "Marker:", request.Marker, "MaxKeys:",
 		request.MaxKeys, "Delimiter:", request.Delimiter, "Version:", request.Version,
 		"keyMarker:", request.KeyMarker, "versionIdMarker:", request.VersionIdMarker,
-		"withDeleteMarker", withDeleteMarker)
-	return yig.MetaStorage.Client.ListObjects(ctx, bucketName, marker, verIdMarker, request.Prefix, request.Delimiter, request.Versioned, request.MaxKeys, withDeleteMarker)
+		"withDeleteMarker", withDeleteMarker, "versioning", isVersioning)
+	return yig.MetaStorage.Client.ListObjects(ctx, bucketName, marker, verIdMarker, request.Prefix, request.Delimiter, request.Versioned, request.MaxKeys, withDeleteMarker, isVersioning)
 }
 
 func (yig *YigStorage) ListObjects(ctx context.Context, credential common.Credential, bucketName string,
@@ -548,7 +548,7 @@ func (yig *YigStorage) ListObjects(ctx context.Context, credential common.Creden
 	}
 	// TODO validate user policy and ACL
 
-	retObjects, prefixes, truncated, nextMarker, _, err := yig.ListObjectsInternal(ctx, bucketName, request)
+	retObjects, prefixes, truncated, nextMarker, _, err := yig.ListObjectsInternal(ctx, bucket, request)
 	if truncated && len(nextMarker) != 0 {
 		result.NextMarker = nextMarker
 	}
@@ -593,6 +593,9 @@ func (yig *YigStorage) ListObjects(ctx context.Context, credential common.Creden
 		})
 		result.NextMarker = url.QueryEscape(result.NextMarker)
 	}
+
+	helper.Logger.Info(ctx, "ListObjects result:", len(result.Objects), result.IsTruncated, result.NextMarker)
+
 	return
 }
 
@@ -621,7 +624,7 @@ func (yig *YigStorage) ListVersionedObjects(ctx context.Context, credential comm
 		}
 	}
 
-	retObjects, prefixes, truncated, nextMarker, nextVerIdMarker, err := yig.ListObjectsInternalWithDeleteMarker(ctx, bucketName, request)
+	retObjects, prefixes, truncated, nextMarker, nextVerIdMarker, err := yig.ListObjectsInternalWithDeleteMarker(ctx, bucket, request)
 	if truncated && len(nextMarker) != 0 {
 		result.NextKeyMarker = nextMarker
 		result.NextVersionIdMarker = nextVerIdMarker

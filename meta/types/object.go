@@ -50,6 +50,7 @@ type Object struct {
 	// ObjectType include `Normal`, `Appendable`, 'Multipart'
 	Type         int
 	StorageClass StorageClass
+	IsLatest 		bool
 }
 
 const ObjectNullVersion = "null"
@@ -62,6 +63,8 @@ const (
 	ObjectTypeAppendable
 	ObjectTypeMultipart
 )
+
+const NEW_IS_LATEST_VALUE = 1
 
 func (o *Object) Serialize() (map[string]interface{}, error) {
 	fields := make(map[string]interface{})
@@ -258,10 +261,10 @@ func (o *Object) GetCreateSql() (string, []interface{}, uint64) {
 	customAttributes, _ := json.Marshal(o.CustomAttributes)
 	acl, _ := json.Marshal(o.ACL)
 	lastModifiedTime := o.LastModifiedTime.Format(TIME_LAYOUT_TIDB)
-	sql := "insert into objects values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+	sql := "insert into objects values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 	args := []interface{}{o.BucketName, o.Name, version, o.Location, o.Pool, o.OwnerId, o.Size, o.ObjectId,
 		lastModifiedTime, o.Etag, o.ContentType, customAttributes, acl, o.NullVersion, o.DeleteMarker,
-		o.SseType, o.EncryptionKey, o.InitializationVector, o.Type, o.StorageClass}
+		o.SseType, o.EncryptionKey, o.InitializationVector, o.Type, o.StorageClass, NEW_IS_LATEST_VALUE}
 	return sql, args, version
 }
 

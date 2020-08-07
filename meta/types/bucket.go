@@ -188,3 +188,12 @@ type BucketInfo struct {
 	Usage      int64
 	FileNum    int64
 }
+
+func (b *Bucket) IsVersioning () bool {
+	if b.Versioning == VersionDisabled {
+		return false
+	}
+
+	// Enabled or Suspended, there may be more than one version for each object.
+	return true
+}

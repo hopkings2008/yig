@@ -119,7 +119,7 @@ func getIAMReturnCode(code string) error {
 }
 // GetKeysByUid get credential according to uid
 func (a *Client) GetKeysByUid(uid string) (credentials []common.Credential, err error) {
-	return nil, fmt.Errorf("unsupported api")
+	return
 }
 
 func privateEncryptMD5withRSA(data []byte, keyBytes []byte) (string, error) {

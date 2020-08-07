@@ -15,19 +15,21 @@ type Client interface {
 	CommitTrans(tx interface{}) error
 	//object
 	GetObject(bucketName, objectName, version string) (object *Object, err error)
-	GetAllObject(bucketName, objectName, version string) (object []*Object, err error)
+	GetAllObject(bucketName, objectName, version string, maxKeys int) (object []*Object, err error)
 	PutObject(object *Object, tx interface{}) error
 	UpdateAppendObject(object *Object, versionId string) error
 	UpdateObjectAttrs(object *Object) error
 	DeleteObject(object *Object, tx interface{}) error
 	UpdateObjectAcl(object *Object) error
+	UpdateLastLatestToFalse(ctx context.Context, object *Object, tx interface{}) (err error)
+	UpdateLastLatestToTrue(ctx context.Context, object *Object, tx interface{}) (err error)
 	//bucket
 	GetBucket(bucketName string) (bucket *Bucket, err error)
 	GetBuckets() (buckets []*Bucket, err error)
 	PutBucket(bucket *Bucket) error
 	CheckAndPutBucket(bucket *Bucket) (bool, error)
 	DeleteBucket(bucket *Bucket) error
-	ListObjects(ctx context.Context, bucketName, marker, verIdMarker, prefix, delimiter string, versioned bool, maxKeys int, withDeleteMarker bool) (retObjects []*Object, prefixes []string, truncated bool, nextMarker, nextVerIdMarker string, err error)
+	ListObjects(ctx context.Context, bucketName, marker, verIdMarker, prefix, delimiter string, versioned bool, maxKeys int, withDeleteMarker, isBucketVersioning bool) (retObjects []*Object, prefixes []string, truncated bool, nextMarker, nextVerIdMarker string, err error)
 	UpdateUsage(bucketName string, size int64, tx interface{}) error
 	UpdateBucketInfo(usages map[string]*BucketInfo, tx interface{}) error
 	GetAllBucketInfo() (map[string]*BucketInfo, error)

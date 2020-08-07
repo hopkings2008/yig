@@ -20,14 +20,19 @@ func (t *TidbClient) GetObject(bucketName, objectName, version string) (object *
 	var iversion uint64
 	var sqltext string
 	var row *sql.Row
+
+	sqltext = "select bucketname,name,version,location,pool,ownerid,size,objectid," +
+		"lastmodifiedtime,etag,contenttype,customattributes,acl,nullversion," +
+		"deletemarker,ssetype,encryptionkey,initializationvector,type,storageclass,islatest from objects"
 	if version == "" {
-		sqltext = "select * from objects where bucketname=? and name=? order by bucketname,name,version limit 1;"
+		// TODO should add islatest here?
+		sqltext += " where bucketname=? and name=? order by bucketname,name,version limit 1;"
 		row = t.Client.QueryRow(sqltext, bucketName, objectName)
 	} else if version == ObjectNullVersion {
-		sqltext = "select * from objects where bucketname=? and name=? and nullversion=1 limit 1;" // There should be only one NullVersion object.
+		sqltext += " where bucketname=? and name=? and nullversion=1 limit 1;" // There should be only one NullVersion object.
 		row = t.Client.QueryRow(sqltext, bucketName, objectName)
 	} else {
-		sqltext = "select * from objects where bucketname=? and name=? and version=? limit 1;"
+		sqltext += " where bucketname=? and name=? and version=? limit 1;"
 		internalVersion, err := ConvertS3VersionToRawVersion(version)
 		if err != nil {
 			return nil, ErrInternalError
@@ -56,6 +61,7 @@ func (t *TidbClient) GetObject(bucketName, objectName, version string) (object *
 		&object.InitializationVector,
 		&object.Type,
 		&object.StorageClass,
+		&object.IsLatest,
 	)
 	if err == sql.ErrNoRows {
 		err = ErrNoSuchKey
@@ -108,10 +114,21 @@ func ConvertS3VersionToRawVersion(s3Version string) (string, error) {
 	return string(xxtea.Decrypt(versionEncryped, XXTEA_KEY)), nil
 }
 
-func (t *TidbClient) GetAllObject(bucketName, objectName, version string) (object []*Object, err error) {
-	sqltext := "select version from objects where bucketname=? and name=?;"
+func (t *TidbClient) GetAllObject(bucketName, objectName, rawVersionId string, maxKeys int) (object []*Object, err error) {
+	sqltext := "select version from objects where bucketname=? and name=?"
+	args := []interface{}{bucketName, objectName}
+	if rawVersionId != "" {
+		sqltext += " and version > ?"
+		args = append(args, rawVersionId)
+	}
+	sqltext += " order by bucketname,name,version"
+
+	if maxKeys > 0 {
+		sqltext += " limit ?"
+		args = append(args, maxKeys)
+	}
 	var versions []uint64
-	rows, err := t.Client.Query(sqltext, bucketName, objectName)
+	rows, err := t.Client.Query(sqltext, args...)
 	if err != nil {
 		return
 	}
@@ -269,4 +286,49 @@ func (t *TidbClient) IsObjectDeleteMarkerExist(ctx context.Context, bucketName, 
 	}
 
 	return true, nil
+}
+
+func (t *TidbClient) UpdateLastLatestToFalse(ctx context.Context, object *Object, tx interface{}) (err error) {
+	if tx == nil {
+		helper.Logger.Error(ctx, tx)
+		return ErrInternalError
+	}
+
+	// Find last object and set islatest=false.
+	// TODO: should we use bucketname+key+(islatest=true) for better robustness?
+	sqltext := "update objects set islatest=false where bucketname=? and name=? and version in" +
+		" (select version from objects" +
+		" where bucketname=? and name=? and islatest=true" +
+		" order by bucketname,name,version" +
+		" limit 1)"
+	args := []interface{}{object.BucketName, object.Name, object.BucketName, object.Name}
+	sqlTx, _ := tx.(*sql.Tx)
+	_, err = sqlTx.Exec(sqltext, args...)
+
+	helper.Logger.Info(ctx, "sqltext:", sqltext, "args:", args, "err:", err)
+
+	return err
+}
+
+func (t *TidbClient) UpdateLastLatestToTrue(ctx context.Context, object *Object, tx interface{}) (err error) {
+	if tx == nil {
+		helper.Logger.Error(ctx, tx)
+		return ErrInternalError
+	}
+
+	// Find last object and set islatest=true.
+	// Two possible cases during update: 1. this record is deleted in another transaction; 2. a new record inserted;
+	// Should conflict in these cases by tidb.
+	sqltext := "update objects set islatest=true where bucketname=? and name=? and version in" +
+		" (select version from objects" +
+		" where bucketname=? and name=?" +
+		" order by bucketname,name,version" +
+		" limit 1)"
+	args := []interface{}{object.BucketName, object.Name, object.BucketName, object.Name}
+	sqlTx, _ := tx.(*sql.Tx)
+	_, err = sqlTx.Exec(sqltext, args...)
+
+	helper.Logger.Info(ctx, "sqltext:", sqltext, "args:", args, "err:", err)
+
+	return err
 }
