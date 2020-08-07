@@ -15,17 +15,11 @@ import (
 )
 
 func (t *TidbClient) GetBucket(bucketName string) (bucket *Bucket, err error) {
-<<<<<<< HEAD
-	var acl, cors, lc, policy, createTime string
+	var acl, cors, logging, lc, policy, createTime string
 	var updateTime sql.NullString
 	var website sql.NullString
 
-	sqltext := "select bucketname,acl,cors,lc,uid,policy,createtime,usages,versioning,update_time,website from buckets where bucketname=?;"
-=======
-	var acl, cors, logging, lc, policy, website, createTime string
-	var updateTime sql.NullString
 	sqltext := "select bucketname,acl,cors,COALESCE(logging,\"\"),lc,uid,policy,createtime,usages,versioning,update_time,website from buckets where bucketname=?;"
->>>>>>> 08bbf9ee96a19e643b55a78f6b5b7e0487e059bb
 	tmp := &Bucket{}
 	err = t.Client.QueryRow(sqltext, bucketName).Scan(
 		&tmp.Name,
