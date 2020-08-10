@@ -10,6 +10,7 @@ import (
 
 	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/iam"
+	"github.com/journeymidnight/yig/ims"
 	"github.com/journeymidnight/yig/log"
 	bus "github.com/journeymidnight/yig/messagebus"
 	_ "github.com/journeymidnight/yig/messagebus/kafka"
@@ -86,6 +87,12 @@ func main() {
 	allPluginMap := mods.InitialPlugins()
 
 	iam.InitializeIamClient(allPluginMap)
+	// try to initialize the image process plugin.
+	err := ims.CreateImgProcessPlugin(allPluginMap)
+	if err != nil {
+		helper.Logger.Error(nil, "failed to create image process client, err: %v", err)
+		panic("failed to create image process client")
+	}
 
 	startAdminServer(adminServerConfig)
 

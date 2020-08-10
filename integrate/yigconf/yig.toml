@@ -61,10 +61,17 @@ broker_list = "kafka:29092"
 
 # Plugin Config list
 [plugins.dummy_iam]
-path = "/etc/yig/plugins/dummy_iam_plugin.so"
+path = "/work/plugins/dummy_iam_plugin.so"
 enable = true
 [plugins.dummy_iam.args]
 url="s3.test.com"
+
+[plugins.img_plugin]
+path = "/work/plugins/img_process_plugin.so"
+enable = true
+[plugins.img_plugin.args]
+img_server_url = "http://10.5.0.30:9090"
+
 
 [plugins.not_exist]
 path = "not_exist_so"
