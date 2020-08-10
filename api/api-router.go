@@ -87,6 +87,10 @@ func RegisterAPIRouter(mux *router.Router, api ObjectAPIHandlers) {
 
 		/// Bucket operations
 
+		//PutBucketLogging
+		bucket.Methods("PUT").HandlerFunc(api.PutBucketLoggingHandler).Queries("logging", "")
+		// GetBucketLogging
+		bucket.Methods("GET").HandlerFunc(api.GetBucketLoggingHandler).Queries("logging", "")
 		// GetBucketLocation
 		bucket.Methods("GET").HandlerFunc(api.GetBucketLocationHandler).Queries("location", "")
 		// ListMultipartUploads

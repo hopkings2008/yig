@@ -26,6 +26,15 @@ func DumpStacks() {
 	helper.Logger.Error(nil, "*** dump end")
 }
 
+func init_region(yig *storage.YigStorage) {
+	region, err := yig.MetaStorage.GetRegion()
+	if err != nil && region == "" {
+		panic("Yig invalid region")
+	}
+
+	helper.CONFIG.Region = region
+	helper.Logger.Info(nil, "Yig current region ", helper.CONFIG.Region)
+}
 func main() {
 	// Errors should cause panic so as to log to stderr for function calls in main()
 
@@ -54,6 +63,9 @@ func main() {
 		Logger:  helper.Logger,
 		Yig:     yig,
 	}
+
+	// Init Yig region
+	init_region(yig)
 
 	// try to create message bus sender if message bus is enabled.
 	// message bus sender is singleton so create it beforehand.

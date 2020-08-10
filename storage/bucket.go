@@ -679,3 +679,26 @@ func (yig *YigStorage) ListVersionedObjects(ctx context.Context, credential comm
 
 	return
 }
+
+func (yig *YigStorage) SetBucketLogging(ctx context.Context, bucket *types.Bucket, bl datatype.BucketLoggingStatus, credential common.Credential) error {
+	if bucket.OwnerId != credential.UserId {
+		return ErrBucketAccessForbidden
+	}
+	bucket.BucketLogging = bl
+	err := yig.MetaStorage.Client.PutBucket(bucket)
+	if err != nil {
+		return err
+	}
+	yig.MetaStorage.Cache.Remove(redis.BucketTable, meta.BUCKET_CACHE_PREFIX, bucket.Name)
+
+	return nil
+}
+
+func (yig *YigStorage) GetBucketLogging(ctx context.Context, bucket *types.Bucket, credential common.Credential) (bl datatype.BucketLoggingStatus,
+	err error) {
+	if bucket.OwnerId != credential.UserId {
+		err = ErrBucketAccessForbidden
+		return
+	}
+	return bucket.BucketLogging, nil
+}
