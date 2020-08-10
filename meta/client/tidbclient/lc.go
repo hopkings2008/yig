@@ -30,7 +30,7 @@ func (t *TidbClient) RemoveBucketFromLifeCycle(ctx context.Context, bucket *Buck
 
 func (t *TidbClient) ScanLifeCycle(ctx context.Context, limit int, marker string) (result ScanLifeCycleResult, err error) {
 	result.Truncated = false
-	sqltext := "select * from lifecycle where bucketname > ? limit ?;"
+	sqltext := "select bucketname,status from lifecycle where bucketname > ? limit ?;"
 	rows, err := t.Client.Query(sqltext, marker, limit)
 	if err == sql.ErrNoRows {
 		helper.Logger.Error(ctx, "Failed in sql.ErrNoRows:", sqltext)
