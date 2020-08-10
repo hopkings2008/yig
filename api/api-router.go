@@ -88,6 +88,9 @@ func RegisterAPIRouter(mux *router.Router, api ObjectAPIHandlers) {
 		bucket.Methods("GET").Path("/{object:.+}").HandlerFunc(api.GetObjectHandler)
 		// DeleteObject
 		bucket.Methods("DELETE").Path("/{object:.+}").HandlerFunc(api.DeleteObjectHandler)
+                
+                //GetImageMetrics
+                bucket.Methods("GET").HandlerFunc(api.GetImsImageMetricsHandler).Queries("ims", "{ims:metrics}")
 
 		/// Bucket operations
 

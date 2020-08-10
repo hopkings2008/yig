@@ -92,6 +92,54 @@ func (ipp *ImgProcessPlugin) Do(ctx context.Context, imsReq *ims.ImsReq) (*ims.I
 	return imsResp, nil
 }
 
+func (ipp *ImgProcessPlugin) GetImageMetrics(ctx context.Context, imsReq *ims.MetricsReq) (*ims.MetricsResp, error) {
+        // Read image metrics.
+        new_server := ipp.Server + "/ims/v1/metrics"
+        reqStr, err := json.Marshal(imsReq)
+        if err != nil {
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to encoding req %v, err: %v", *imsReq, err))
+                return nil, err
+        }
+        req, err := http.NewRequest("POST", new_server, bytes.NewReader(reqStr))
+        if err != nil {
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to new post http request to server %s, err: %v",
+                        new_server, err))
+                return nil, err
+        }
+        req.Header.Add("Content-Length", strconv.Itoa(len(reqStr)))
+        resp, err := ipp.client.Do(req)
+        if err != nil {
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to send req %v to server %s, err: %v",
+                        *imsReq, new_server, err))
+                return nil, err
+        }
+        if resp.StatusCode >= 300 {
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to perform image process for %v, return %d",
+                        *imsReq, resp.StatusCode))
+                resp.Body.Close()
+                return nil, errors.New(resp.Status)
+        }
+        lenStr := resp.Header.Get("Content-Length")
+        if lenStr == "" {
+                helper.Logger.Error(ctx, fmt.Sprintf("got invalid response from img server, missing content-length"))
+                resp.Body.Close()
+                return nil, errors.New(fmt.Sprintf("got invalid response from img server, missing content-length"))
+        }
+        size, err := strconv.ParseInt(lenStr, 10, 64)
+        if err != nil {
+                helper.Logger.Error(ctx, fmt.Sprintf("got invalid response from img server, invalid content-length: %s", lenStr))
+                resp.Body.Close()
+                return nil, err
+        }
+
+        metricsResp := &ims.MetricsResp{
+                Length: size,
+                Reader: resp.Body,
+        }
+        return metricsResp, nil
+
+}
+
 func CreatePlugin(config map[string]interface{}) (interface{}, error) {
 	helper.Logger.Info(nil, fmt.Sprintf("Create image process plugin: %v", config))
 	tr := &http.Transport{

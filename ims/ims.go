@@ -63,6 +63,18 @@ type CephStoreInfo struct {
 	Size int64 `json:"size"`
 }
 
+type MetricsResp struct {
+        // the size of the metrics data buffer.
+        Length int64
+        // data: the image metrics data reader.
+        // Note: it the caller's duty to close this reader.
+        Reader io.ReadCloser
+}
+
+type MetricsReq struct {
+        Bucketname string `json:"bucketname"`
+}
+
 /*
 * ImgProcessClient: handles the image process logic
 *
@@ -78,6 +90,10 @@ type ImgProcessPlugin interface {
 	*return: processed image data & error
 	 */
 	Do(ctx context.Context, imsReq *ImsReq) (*ImsResp, error)
+        /*
+        *GetImageMetrics: get image metrics.
+         */
+        GetImageMetrics(ctx context.Context, imsReq *MetricsReq) (*MetricsResp, error)
 }
 
 var imgProcessPlugin ImgProcessPlugin
