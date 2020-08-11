@@ -82,6 +82,10 @@ type Config struct {
 
 	// IAM Cache expire time
 	IAMCacheExpireTime int `toml:"iam_cache_expire_time"`
+
+	// bucket logging
+	LoggingCacheSize  int `toml:"logging_cache_size"`
+	LoggingExpireTime int `toml:"logging_expire_time"`
 }
 
 type PluginConfig struct {
@@ -207,6 +211,10 @@ func MarshalTOMLConfig() error {
 	CONFIG.MsgBus.SendMaxRetries = Ternary(c.MsgBus.SendMaxRetries == 0, 2, c.MsgBus.SendMaxRetries).(int)
 
 	CONFIG.IAMCacheExpireTime = Ternary(c.IAMCacheExpireTime < 0, 600, c.IAMCacheExpireTime).(int)
+
+	// bucket logging
+	CONFIG.LoggingCacheSize = Ternary(c.LoggingCacheSize == 0, 524288, c.LoggingCacheSize).(int)
+	CONFIG.LoggingExpireTime = Ternary(c.LoggingExpireTime == 0, 1800, c.LoggingExpireTime).(int)
 	return nil
 }
 

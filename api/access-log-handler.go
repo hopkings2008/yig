@@ -9,6 +9,7 @@ import (
 	"github.com/journeymidnight/yig/helper"
 	bus "github.com/journeymidnight/yig/messagebus"
 	"github.com/journeymidnight/yig/messagebus/types"
+	msg "github.com/journeymidnight/yig/messagebus/types"
 	"github.com/journeymidnight/yig/meta"
 )
 
@@ -46,6 +47,61 @@ type AccessLogHandler struct {
 	replacePool      *sync.Pool
 }
 
+func recordLogging(r *http.Request, code int, start time.Time, duration int64) {
+	ctx := getRequestContext(r)
+	SendMsg := func(topic, key string, value string) {
+		sender, err := bus.GetMessageSender()
+		if err != nil {
+			helper.ErrorIf(err, "SendMsg: send msg to kafka failed")
+			return
+		}
+
+		msg := &msg.Message{
+			Topic:   topic,
+			Key:     key,
+			ErrChan: nil,
+			Value:   []byte(value),
+		}
+		err = sender.AsyncSend(msg)
+		if err != nil {
+			helper.ErrorIf(err, "SendMsg: Send msg failed")
+			return
+		}
+	}
+
+	if ctx.BucketInfo == nil && ctx.ObjectName == "" {
+		return
+	}
+
+	if ctx.BucketInfo.BucketLogging.LoggingEnabled.TargetBucket != "" &&
+		ctx.BucketInfo.BucketLogging.LoggingEnabled.TargetPrefix != "" {
+
+		requesttime := start.Format("2006-01-02 15:04:05.000000")
+
+		requesturl := "-"
+		if r.RequestURI != "" {
+			requesturl = r.RequestURI
+		}
+
+		useragent := "-"
+		if r.UserAgent() != "" {
+			useragent = r.UserAgent()
+		}
+
+		str := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%d,%d,%d,%s\n", requesttime,
+			ctx.BucketInfo.OwnerId,
+			ctx.BucketName,
+			r.RemoteAddr,
+			r.Method,
+			requesturl,
+			200,
+			r.ContentLength,
+			duration,
+			useragent)
+		SendMsg("LoggingTopic", ctx.BucketName, str)
+	}
+
+}
 func (a AccessLogHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.responseRecorder = NewResponseRecorder(w)
 
@@ -74,6 +130,7 @@ func (a AccessLogHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if dur >= 100 {
 		helper.Logger.Warn(r.Context(), fmt.Sprintf("slow log: access_log_handler_notify(%s) spent total %d", response, dur))
 	}
+	recordLogging(r, a.responseRecorder.status, tstart, dur)
 }
 
 func (a AccessLogHandler) notify(elems map[string]string) {

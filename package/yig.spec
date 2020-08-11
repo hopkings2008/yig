@@ -36,6 +36,7 @@ install -D -m 755 admin %{buildroot}%{_bindir}/yig_admin
 install -D -m 755 delete %{buildroot}%{_bindir}/yig_delete_daemon
 install -D -m 755 getrediskeys %{buildroot}%{_bindir}/yig_getrediskeys
 install -D -m 755 lc     %{buildroot}%{_bindir}/yig_lifecyle_daemon
+install -D -m 755 bucketlogging     %{buildroot}%{_bindir}/yig_bl_daemon
 install -D -m 644 plugins/wocloud_iam_plugin.so   %{buildroot}/usr/lib64/wocloud_iam_plugin.so
 install -D -m 644 plugins/wocloud_iam_oss_plugin.so   %{buildroot}/usr/lib64/wocloud_iam_oss_plugin.so
 install -D -m 644 plugins/dummy_iam_plugin.so   %{buildroot}/usr/lib64/dummy_iam_plugin.so
@@ -44,9 +45,11 @@ install -D -m 644 package/yig.logrotate %{buildroot}/etc/logrotate.d/yig.logrota
 install -D -m 644 package/access.logrotate %{buildroot}/etc/logrotate.d/access.logrotate
 install -D -m 644 package/yig_delete.logrotate %{buildroot}/etc/logrotate.d/yig_delete.logrotate
 install -D -m 644 package/yig_lc.logrotate %{buildroot}/etc/logrotate.d/yig_lc.logrotate
+install -D -m 644 package/yig_bl.logrotate %{buildroot}/etc/logrotate.d/yig_bl.logrotate
 install -D -m 644 package/yig.service   %{buildroot}/usr/lib/systemd/system/yig.service
 install -D -m 644 package/yig_delete.service   %{buildroot}/usr/lib/systemd/system/yig_delete.service
 install -D -m 644 package/yig_lc.service   %{buildroot}/usr/lib/systemd/system/yig_lc.service
+install -D -m 644 package/yig_bl.service   %{buildroot}/usr/lib/systemd/system/yig_bl.service
 install -D -m 644 conf/yig.toml %{buildroot}%{_sysconfdir}/yig/yig.toml
 install -D -m 644 conf/actions.json %{buildroot}%{_sysconfdir}/yig/actions.json
 install -D -m 644 integrate/yig.sql  %{buildroot}/usr/local/yig/yig.sql
@@ -74,6 +77,7 @@ rm -rf %{buildroot}
 /usr/bin/yig_delete_daemon
 /usr/bin/yig_getrediskeys
 /usr/bin/yig_lifecyle_daemon
+/usr/bin/yig_bl_daemon
 /usr/lib64/wocloud_iam_plugin.so
 /usr/lib64/wocloud_iam_oss_plugin.so
 /usr/lib64/dummy_iam_plugin.so
@@ -81,10 +85,12 @@ rm -rf %{buildroot}
 /etc/logrotate.d/access.logrotate
 /etc/logrotate.d/yig_delete.logrotate
 /etc/logrotate.d/yig_lc.logrotate
+/etc/logrotate.d/yig_bl.logrotate
 %dir /var/log/yig/
 /usr/lib/systemd/system/yig.service
 /usr/lib/systemd/system/yig_delete.service
 /usr/lib/systemd/system/yig_lc.service
+/usr/lib/systemd/system/yig_bl.service
 /usr/local/yig/yig.sql
 
 

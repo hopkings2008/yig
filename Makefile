@@ -18,12 +18,14 @@ build_internal:
 	go build $(URLPATH)/$(REPO)/tools/delete.go
 	go build $(URLPATH)/$(REPO)/tools/getrediskeys.go
 	go build $(URLPATH)/$(REPO)/tools/lc.go
+	go build $(URLPATH)/$(REPO)/tools/bucketlogging.go
 	cp -f yig $(PWD)/build/bin/
 	cp -f $(PWD)/plugins/*.so $(PWD)/integrate/yigconf/plugins/
 	cp -f admin $(PWD)/build/bin/
 	cp -f delete $(PWD)/build/bin/
 	cp -f getrediskeys $(PWD)/build/bin/
 	cp -f lc $(PWD)/build/bin/
+	cp -f bucketlogging $(PWD)/build/bin/
 
 pkg:
 	docker run --rm -v $(PWD):/work -w /work journeymidnight/yig bash -c 'bash package/rpmbuild.sh'
