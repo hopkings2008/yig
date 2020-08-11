@@ -631,15 +631,13 @@ func (yig *YigStorage) ListVersionedObjects(ctx context.Context, credential comm
 	}
 
 	objects := make([]datatype.VersionedObject, 0, len(retObjects))
-	storageClassStandard := "STANDARD"
 	for _, o := range retObjects {
 		object := datatype.VersionedObject{
 			LastModified: o.LastModifiedTime.UTC().Format(types.CREATE_TIME_LAYOUT),
 			ETag:         "\"" + o.Etag + "\"",
 			Size:         o.Size,
-			//StorageClass: "STANDARD",
-			Key:      o.Name,
-			IsLatest: o.IsLatest,
+			Key:          o.Name,
+			IsLatest:     o.IsLatest,
 		}
 		if request.EncodingType != "" { // only support "url" encoding for now
 			object.Key = url.QueryEscape(object.Key)
@@ -649,7 +647,7 @@ func (yig *YigStorage) ListVersionedObjects(ctx context.Context, credential comm
 			object.XMLName.Local = "DeleteMarker"
 		} else {
 			object.XMLName.Local = "Version"
-			object.StorageClass = &storageClassStandard
+			object.StorageClass = "STANDARD"
 		}
 		if request.FetchOwner {
 			var owner common.Credential
