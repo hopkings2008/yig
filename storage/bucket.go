@@ -446,14 +446,14 @@ func (yig *YigStorage) DeleteBucket(ctx context.Context, bucketName string, cred
 	}
 
 	// Check if bucket is empty
-	objs, _, _, _, _, err := yig.MetaStorage.Client.ListObjects(ctx, bucketName, "", "", "", "", false, 1, true, bucket.IsVersioning())
+	isEmpty, err := yig.MetaStorage.Client.IsEmptyBucket(ctx, bucketName)
 	if err != nil {
-		yig.Logger.Error(ctx, err)
 		return err
 	}
-	if len(objs) != 0 {
+	if !isEmpty {
 		return ErrBucketNotEmpty
 	}
+
 	err = yig.MetaStorage.Client.DeleteBucket(bucket)
 	if err != nil {
 		return err
@@ -632,13 +632,12 @@ func (yig *YigStorage) ListVersionedObjects(ctx context.Context, credential comm
 
 	objects := make([]datatype.VersionedObject, 0, len(retObjects))
 	for _, o := range retObjects {
-		// TODO: IsLatest
 		object := datatype.VersionedObject{
 			LastModified: o.LastModifiedTime.UTC().Format(types.CREATE_TIME_LAYOUT),
 			ETag:         "\"" + o.Etag + "\"",
 			Size:         o.Size,
-			StorageClass: "STANDARD",
 			Key:          o.Name,
+			IsLatest:     o.IsLatest,
 		}
 		if request.EncodingType != "" { // only support "url" encoding for now
 			object.Key = url.QueryEscape(object.Key)
@@ -648,6 +647,7 @@ func (yig *YigStorage) ListVersionedObjects(ctx context.Context, credential comm
 			object.XMLName.Local = "DeleteMarker"
 		} else {
 			object.XMLName.Local = "Version"
+			object.StorageClass = "STANDARD"
 		}
 		if request.FetchOwner {
 			var owner common.Credential

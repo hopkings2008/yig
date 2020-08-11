@@ -820,3 +820,34 @@ func (t *TidbClient) GetAllBucketInfo() (map[string]*BucketInfo, error) {
 	}
 	return infos, nil
 }
+
+func (t *TidbClient) IsEmptyBucket(ctx context.Context, bucketName string) (isEmpty bool, err error) {
+	sqltext := "select 1 from objects where bucketname=? limit 1;"
+	row := t.Client.QueryRow(sqltext, bucketName)
+	var result int
+
+	err = row.Scan(&result)
+	if err == nil {
+		// err == nil, which means there are objects in the bucket.
+		return false, nil
+	} else if err != sql.ErrNoRows {
+		helper.Logger.Error(ctx, err, sqltext, bucketName)
+		return false, err
+	}
+	// err == sql.ErrNoRows, which means there is no objects in the bucket.
+
+	sqltext = "select 1 from multiparts where bucketname=? limit 1;"
+	row = t.Client.QueryRow(sqltext, bucketName)
+
+	err = row.Scan(&result)
+	if err == nil {
+		// err == nil, which means there are incomplete multiparts in the bucket.
+		return false, nil
+	} else if err != sql.ErrNoRows {
+		helper.Logger.Error(ctx, err, sqltext, bucketName)
+		return false, err
+	}
+	// err == sql.ErrNoRows, which means there is no multiparts in the bucket.
+
+	return true, nil
+}
