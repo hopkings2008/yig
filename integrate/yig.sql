@@ -277,7 +277,7 @@ ALTER TABLE buckets ADD COLUMN website JSON DEFAULT NULL AFTER policy;
 
 ALTER TABLE lifecycle ADD COLUMN lastscannedtime bigint(20) DEFAULT 0 AFTER status;
 ALTER TABLE lifecycle ADD UNIQUE KEY (bucketname); /* It's better to add unique in bucketname. If it fails in yig upgrade for duplication already exists, it's ok to skip it. */
-ALTER TABLE objects ADD COLUMN meta varchar(255) DEFAULT "" AFTER storageclass;
+ALTER TABLE objects ADD COLUMN meta varchar(255) DEFAULT "" AFTER islatest;
 ALTER TABLE gc ADD COLUMN size bigint(20) DEFAULT 0 AFTER triedtimes;
 ALTER TABLE gc ADD COLUMN meta varchar(255) DEFAULT "" AFTER size;
 ALTER TABLE gcpart ADD COLUMN meta varchar(255) DEFAULT "" AFTER version;
