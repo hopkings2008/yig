@@ -34,6 +34,68 @@ func (ss *StorageSuite) TestCephDriverBasicWrite(c *C) {
 	}
 }
 
+func (ss *StorageSuite) TestBackCompatible(c *C) {
+	ctx := context.Background()
+	meta := ""
+	objectName := "TestBackCompatible"
+	size := int64(64<<20 + 1)
+	randomReader := NewRandomReader(size)
+	hasher := md5.New()
+	reader := io.TeeReader(randomReader, hasher)
+	obj := fmt.Sprintf("%s_%d", objectName, size)
+	n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, reader)
+	c.Assert(err, Equals, nil)
+	c.Assert(n, Equals, size)
+
+	// get the body md5.
+	md5Sum := hasher.Sum(nil)
+	md5Str := hex.EncodeToString(md5Sum[:])
+	// read and verify the md5sum.
+	driverReader, err := ss.driver.Read(ctx, ss.pool, obj, meta, 0, size)
+	c.Assert(err, Equals, nil)
+	defer driverReader.Close()
+	totalSize := int64(0)
+	hasher = md5.New()
+	reader = io.TeeReader(driverReader, hasher)
+	for {
+		buf := make([]byte, 4<<20)
+		n, err := reader.Read(buf)
+		if err == nil || err == io.EOF {
+			totalSize += int64(n)
+			if err == io.EOF {
+				break
+			}
+		}
+		c.Assert(err, Equals, nil)
+	}
+	c.Assert(totalSize, Equals, size)
+	md5Sum = hasher.Sum(nil)
+	md5ReadStr := hex.EncodeToString(md5Sum[:])
+	c.Assert(md5ReadStr, Equals, md5Str)
+
+	// test use the stripe to read, it should fail.
+	osi := types.ObjStoreInfo{
+		Type:             types.STORAGE_DRIVER_STRIPE,
+		StripeObjectSize: 4 << 20,
+		StripeUnit:       2 << 20,
+		StripeNum:        5,
+	}
+	meta, err = osi.Encode()
+	c.Assert(err, Equals, nil)
+
+	driverReader2, err := ss.driver.Read(ctx, ss.pool, obj, meta, 0, size)
+	c.Assert(err, Equals, nil)
+	defer driverReader2.Close()
+	buf := make([]byte, 4<<20)
+	nn, err := driverReader2.Read(buf)
+	c.Assert(err, Not(Equals), nil)
+	c.Assert(nn, Equals, 0)
+
+	err = ss.driver.Delete(ctx, ss.pool, obj, meta, totalSize)
+	c.Assert(err, Equals, nil)
+	c.Logf("succeed to check backward compatible with size %d", size)
+}
+
 func (ss *StorageSuite) Test5GBasic(c *C) {
 	// change this to cpu_num * 1.5
 	numGoroutine := 4
