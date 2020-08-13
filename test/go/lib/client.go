@@ -62,6 +62,23 @@ func NewS3() *S3Client {
 	return &S3Client{s3client}
 }
 
+func NewS3WithCred(endpoint, ak, sk, region string) *S3Client {
+	creds := credentials.NewStaticCredentials(ak, sk, "")
+
+	// By default make sure a region is specified
+	s3client := s3.New(session.Must(session.NewSession(
+		&aws.Config{
+			Credentials: creds,
+			DisableSSL:  aws.Bool(true),
+			Endpoint:    aws.String(endpoint),
+			Region:      aws.String(region),
+		},
+	),
+	),
+	)
+	return &S3Client{s3client}
+}
+
 func NewS3Internal() *S3Client {
 	creds := credentials.NewStaticCredentials("hehehehe", "hehehehe", "")
 
