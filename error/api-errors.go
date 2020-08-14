@@ -200,6 +200,10 @@ const (
 	ErrIAMResponseBodyReadFailed
 	ErrIAMResponseBodyParseFailed
 	ErrIAMUnknown
+
+        // Style error
+        ErrInvalidStyleName
+        ErrInvalidStyle
 )
 
 // error code to APIError structure, these fields carry respective
@@ -946,6 +950,16 @@ var ErrorCodeResponse = map[ApiErrorCode]ApiErrorStruct{
 		Description:    "IAM has an unknown error",
 		HttpStatusCode: http.StatusForbidden,
 	},
+        ErrInvalidStyleName: {
+                AwsErrorCode:   "InvalidStyleName",
+                Description:    "The specified style name is not valid.",
+                HttpStatusCode: http.StatusBadRequest,
+        },
+        ErrInvalidStyle: {
+                AwsErrorCode:   "InvalidStyle",
+                Description:    "The specified style is not valid.",
+                HttpStatusCode: http.StatusBadRequest,
+        },
 }
 
 func (e ApiErrorCode) AwsErrorCode() string {

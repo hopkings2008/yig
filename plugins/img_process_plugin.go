@@ -92,30 +92,22 @@ func (ipp *ImgProcessPlugin) Do(ctx context.Context, imsReq *ims.ImsReq) (*ims.I
 	return imsResp, nil
 }
 
-func (ipp *ImgProcessPlugin) GetImageMetrics(ctx context.Context, imsReq *ims.MetricsReq) (*ims.MetricsResp, error) {
-        // Read image metrics.
-        new_server := ipp.Server + "/ims/v1/metrics"
-        reqStr, err := json.Marshal(imsReq)
+
+func (ipp *ImgProcessPlugin) SendHttpToIms(ctx context.Context, newServer string, reqStr []byte) (*ims.ImsResp, error) {
+        req, err := http.NewRequest("POST", newServer, bytes.NewReader(reqStr))
         if err != nil {
-                helper.Logger.Error(ctx, fmt.Sprintf("failed to encoding req %v, err: %v", *imsReq, err))
-                return nil, err
-        }
-        req, err := http.NewRequest("POST", new_server, bytes.NewReader(reqStr))
-        if err != nil {
-                helper.Logger.Error(ctx, fmt.Sprintf("failed to new post http request to server %s, err: %v",
-                        new_server, err))
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to new post http request to server %s, err: %v", newServer, err))
                 return nil, err
         }
         req.Header.Add("Content-Length", strconv.Itoa(len(reqStr)))
+
         resp, err := ipp.client.Do(req)
         if err != nil {
-                helper.Logger.Error(ctx, fmt.Sprintf("failed to send req %v to server %s, err: %v",
-                        *imsReq, new_server, err))
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to send req to server %s, err: %v", newServer, err))
                 return nil, err
         }
         if resp.StatusCode >= 300 {
-                helper.Logger.Error(ctx, fmt.Sprintf("failed to perform image process for %v, return %d",
-                        *imsReq, resp.StatusCode))
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to perform image process, return %d", resp.StatusCode))
                 resp.Body.Close()
                 return nil, errors.New(resp.Status)
         }
@@ -132,12 +124,56 @@ func (ipp *ImgProcessPlugin) GetImageMetrics(ctx context.Context, imsReq *ims.Me
                 return nil, err
         }
 
-        metricsResp := &ims.MetricsResp{
+        metricsResp := &ims.ImsResp{
+                Type: "application/json",
                 Length: size,
                 Reader: resp.Body,
         }
         return metricsResp, nil
+}
 
+func (ipp *ImgProcessPlugin) CreateImageStyle(ctx context.Context, imsReq *ims.CreateStyleReq) (*ims.ImsResp, error) {
+        helper.Logger.Info(ctx, fmt.Sprintf("begin to del req %v", *imsReq))
+        newServer := ipp.Server + "/ims/v1/styles/create"
+        reqStr, err := json.Marshal(imsReq)
+        if err != nil {
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to encoding req %v, err: %v", *imsReq, err))
+                return nil, err
+        }
+        return ipp.SendHttpToIms(ctx, newServer, reqStr)
+}
+
+func (ipp *ImgProcessPlugin) ListImageStyles(ctx context.Context, imsReq *ims.GetImsReq) (*ims.ImsResp, error) {
+        helper.Logger.Info(ctx, fmt.Sprintf("begin to del req %v", *imsReq))
+        newServer := ipp.Server + "/ims/v1/styles/list"
+        reqStr, err := json.Marshal(imsReq)
+        if err != nil {
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to encoding req %v, err: %v", *imsReq, err))
+                return nil, err
+        }
+        return ipp.SendHttpToIms(ctx, newServer, reqStr)
+}
+
+func (ipp *ImgProcessPlugin) DeleteImageStyles(ctx context.Context, imsReq *ims.DeleteStylesReq) (*ims.ImsResp, error) {
+        helper.Logger.Info(ctx, fmt.Sprintf("begin to del req %v", *imsReq))
+        newServer := ipp.Server + "/ims/v1/styles/delete"
+        reqStr, err := json.Marshal(imsReq)
+        if err != nil {
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to encoding req %v, err: %v", *imsReq, err))
+                return nil, err
+        }
+        return ipp.SendHttpToIms(ctx, newServer, reqStr)
+}
+
+func (ipp *ImgProcessPlugin) GetImageMetrics(ctx context.Context, imsReq *ims.GetImsReq) (*ims.ImsResp, error) {
+        helper.Logger.Info(ctx, fmt.Sprintf("begin to del req %v", *imsReq))
+        newServer := ipp.Server + "/ims/v1/metrics"
+        reqStr, err := json.Marshal(imsReq)
+        if err != nil {
+                helper.Logger.Error(ctx, fmt.Sprintf("failed to encoding req %v, err: %v", *imsReq, err))
+                return nil, err
+        }
+                return ipp.SendHttpToIms(ctx, newServer, reqStr)
 }
 
 func CreatePlugin(config map[string]interface{}) (interface{}, error) {

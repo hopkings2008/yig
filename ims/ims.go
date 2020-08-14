@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+        "time"
 
 	"github.com/journeymidnight/yig/helper"
 	"github.com/journeymidnight/yig/mods"
@@ -63,16 +64,28 @@ type CephStoreInfo struct {
 	Size int64 `json:"size"`
 }
 
-type MetricsResp struct {
-        // the size of the metrics data buffer.
-        Length int64
-        // data: the image metrics data reader.
-        // Note: it the caller's duty to close this reader.
-        Reader io.ReadCloser
+type GetImsReq struct {
+        Bucketname string `json:"bucketname"`
 }
 
-type MetricsReq struct {
+type CreateStyleBody struct {
+        Name string `json:"name"`
+        Style string `json:"style"`
+}
+
+type CreateStyleReq struct {
         Bucketname string `json:"bucketname"`
+        Uid string `json:"uid"`
+        Stylename string `json:"stylename"`
+        Style string `json:"style"`
+        Createtime time.Time `json:"createtime"`
+        Deleted int `json:"deleted"`
+        Updatetime time.Time `json:"updatetime"`
+}
+
+type DeleteStylesReq struct {
+        Bucketname string `json:"bucketname"`
+        Names []string `json:"names"`
 }
 
 /*
@@ -92,8 +105,20 @@ type ImgProcessPlugin interface {
 	Do(ctx context.Context, imsReq *ImsReq) (*ImsResp, error)
         /*
         *GetImageMetrics: get image metrics.
+        */
+        GetImageMetrics(ctx context.Context, imsReq *GetImsReq) (*ImsResp, error)
+        /*
+        *CreateImageStyle: create image styles.
          */
-        GetImageMetrics(ctx context.Context, imsReq *MetricsReq) (*MetricsResp, error)
+        CreateImageStyle(ctx context.Context, imsReq *CreateStyleReq) (*ImsResp, error)
+        /*
+        *ListImageStyles: list image styles.
+         */
+        ListImageStyles(ctx context.Context, imsReq *GetImsReq) (*ImsResp, error)
+        /*
+        *Delete: list image styles.
+         */
+        DeleteImageStyles(ctx context.Context, imsReq *DeleteStylesReq) (*ImsResp, error)
 }
 
 var imgProcessPlugin ImgProcessPlugin
