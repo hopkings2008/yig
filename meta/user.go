@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	BUCKET_NUMBER_LIMIT = 100
+	BUCKET_NUMBER_LIMIT = 500 // Dont merge.
 )
 
 type BucketNameList struct {

@@ -114,14 +114,29 @@ func ConvertS3VersionToRawVersion(s3Version string) (string, error) {
 	return string(xxtea.Decrypt(versionEncryped, XXTEA_KEY)), nil
 }
 
-func (t *TidbClient) GetAllObject(bucketName, objectName, rawVersionId string, maxKeys int) (object []*Object, err error) {
+// By default, return versions from latest to oldest.
+// If reverseOrder is true, return versions from oldest to latest.
+func (t *TidbClient) GetAllObject(bucketName, objectName, rawVersionId string, s3VersionId string, maxKeys int, reverseOrder bool) (object []*Object, err error) {
 	sqltext := "select version from objects where bucketname=? and name=?"
 	args := []interface{}{bucketName, objectName}
+	if s3VersionId != "" {
+		if rawVersionId, err = ConvertS3VersionToRawVersion(s3VersionId); err != nil {
+			return
+		}
+	}
 	if rawVersionId != "" {
-		sqltext += " and version > ?"
+		if reverseOrder {
+			sqltext += " and version < ?"
+		} else {
+			sqltext += " and version > ?"
+		}
 		args = append(args, rawVersionId)
 	}
-	sqltext += " order by bucketname,name,version"
+
+	sqltext += " order by version"
+	if reverseOrder == true {
+		sqltext += " desc"
+	}
 
 	if maxKeys > 0 {
 		sqltext += " limit ?"

@@ -13,9 +13,15 @@ ssl_key_path = ""
 ssl_cert_path = ""
 
 # DebugMode
-lcdebug = true
 debug_mode = true
 reserved_origins = "s3.test.com,s3-internal.test.com"
+
+# LC Config
+# lcdebug true will calculate seconds as days and should not be enabled in field.
+# lcdebug = false # 现网环境必须false，否则1秒作为1天计算LC过期时间，每20秒扫描一次！！！
+lcthread = 64
+# lc_log_level = "warn" # 现网环境建议配置"warn"或不配置即为"warn"，如果需要debug可以选择“info”，会产生大量log
+# lifecycle_spec = "@midnight" # 现网环境建议配置"@midnight"或不配置即为"@midnight"，或按照资源池负载时间分布配置。
 
 # Meta Config
 meta_cache_type = 2

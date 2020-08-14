@@ -13,9 +13,13 @@ ssl_key_path = ""
 ssl_cert_path = ""
 
 # DebugMode
-lcdebug = true
 debug_mode = true
 reserved_origins = "s3.test.com,s3-internal.test.com"
+
+# LC
+lcdebug = true
+lcthread = 64
+lifecycle_spec = "@midnight"
 
 # Meta Config
 meta_cache_type = 2

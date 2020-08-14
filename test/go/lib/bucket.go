@@ -48,7 +48,7 @@ func (s3client *S3Client) PutBucketVersioning(bucketName, status string) (err er
 	return
 }
 
-func (s3client *S3Client) ListObjectVersions(bucketName, keyMarker, versionIdMarker, prefix, delimiter string, maxKeys int64) (*[][]string, *[]string, bool, string, string, error) {
+func (s3client *S3Client) ListObjectVersions(bucketName, keyMarker, versionIdMarker, prefix, delimiter string, maxKeys int64) (*[][]string, *[][]string, *[]string, bool, string, string, error) {
 	var params *s3.ListObjectVersionsInput
 	if maxKeys > 0 {
 		params = &s3.ListObjectVersionsInput{
@@ -69,7 +69,7 @@ func (s3client *S3Client) ListObjectVersions(bucketName, keyMarker, versionIdMar
 
 	result, err := s3client.Client.ListObjectVersions(params)
 	if err != nil {
-		return nil, nil, false, "", "", err
+		return nil, nil, nil, false, "", "", err
 	}
 
 	// fmt.Println(result)
@@ -87,7 +87,15 @@ func (s3client *S3Client) ListObjectVersions(bucketName, keyMarker, versionIdMar
 		dirList[i] = aws.StringValue(prefix.Prefix)
 	}
 
-	return &keyVersionList, &dirList, aws.BoolValue(result.IsTruncated), aws.StringValue(result.NextKeyMarker), aws.StringValue(result.NextVersionIdMarker), nil
+	deleteMarkerList := make([][]string, len(result.DeleteMarkers))
+	for i, _ := range result.DeleteMarkers {
+		deleteMarkerList[i] = []string{
+			aws.StringValue(result.DeleteMarkers[i].Key),
+			aws.StringValue(result.DeleteMarkers[i].VersionId),
+		}
+	}
+
+	return &keyVersionList, &deleteMarkerList, &dirList, aws.BoolValue(result.IsTruncated), aws.StringValue(result.NextKeyMarker), aws.StringValue(result.NextVersionIdMarker), nil
 }
 
 func (s3client *S3Client) ListObjects(bucketName string) (*[]string, error) {
@@ -145,4 +153,27 @@ func (s3client *S3Client) ListObjectsWithMarker(bucketName, marker, prefix, deli
 	isTruncated = aws.BoolValue(result.IsTruncated)
 
 	return
+}
+
+func (s3client *S3Client) DeleteBucketAllObjectVersions(bucketName string) error {
+	for {
+		if keyVersionList, deleteMarkerList, _, isTruncated, _, _, err := s3client.ListObjectVersions(bucketName, "", "", "", "", 0); err != nil {
+			return err
+		} else {
+			for _, keyVersion := range *keyVersionList {
+				key := keyVersion[0]
+				versionId := keyVersion[1]
+				s3client.DeleteObjectVersion(bucketName, key, versionId)
+			}
+			for _, keyVersion := range *deleteMarkerList {
+				key := keyVersion[0]
+				versionId := keyVersion[1]
+				s3client.DeleteObjectVersion(bucketName, key, versionId)
+			}
+			if !isTruncated {
+				break
+			}
+		}
+	}
+	return nil
 }

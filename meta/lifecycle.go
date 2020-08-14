@@ -6,15 +6,8 @@ import (
 	. "github.com/journeymidnight/yig/meta/types"
 )
 
-func LifeCycleFromBucket(b *Bucket) (lc LifeCycle) {
-	lc.BucketName = b.Name
-	lc.Status = "Pending"
-	return
-}
-
 func (m *Meta) PutBucketToLifeCycle(ctx context.Context, bucket *Bucket) error {
-	lifeCycle := LifeCycleFromBucket(bucket)
-	return m.Client.PutBucketToLifeCycle(ctx, lifeCycle)
+	return m.Client.PutBucketToLifeCycle(ctx, bucket)
 }
 
 func (m *Meta) RemoveBucketFromLifeCycle(ctx context.Context, bucket *Bucket) error {

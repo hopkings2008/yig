@@ -48,8 +48,8 @@ func (m *Meta) GetObject(ctx context.Context, bucketName string, objectName stri
 	return object, nil
 }
 
-func (m *Meta) GetAllObject(bucketName string, objectName string) (object []*Object, err error) {
-	return m.Client.GetAllObject(bucketName, objectName, "", 0)
+func (m *Meta) GetAllObject(bucketName string, objectName string, versionId string, maxKeys int, reverseOrder bool) (object []*Object, err error) {
+	return m.Client.GetAllObject(bucketName, objectName, "", versionId, maxKeys, reverseOrder)
 }
 
 func (m *Meta) GetObjectVersion(ctx context.Context, bucketName, objectName, version string, willNeed bool) (object *Object, err error) {

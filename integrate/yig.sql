@@ -274,3 +274,6 @@ ALTER TABLE objectpart MODIFY objectname varchar(1024) DEFAULT NULL;
 ALTER TABLE objects MODIFY name varchar(1024) DEFAULT NULL;
 
 ALTER TABLE buckets ADD COLUMN website JSON DEFAULT NULL AFTER policy;
+
+ALTER TABLE lifecycle ADD COLUMN lastscannedtime bigint(20) DEFAULT 0 AFTER status;
+ALTER TABLE lifecycle ADD UNIQUE KEY (bucketname); /* It's better to add unique in bucketname. If it fails in yig upgrade for duplication already exists, it's ok to skip it. */

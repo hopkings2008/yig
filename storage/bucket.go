@@ -9,6 +9,7 @@ import (
 
 	"github.com/journeymidnight/yig/api"
 	"github.com/journeymidnight/yig/api/datatype"
+	"github.com/journeymidnight/yig/api/datatype/lifecycle"
 	"github.com/journeymidnight/yig/api/datatype/policy"
 	. "github.com/journeymidnight/yig/error"
 	"github.com/journeymidnight/yig/helper"
@@ -97,7 +98,7 @@ func (yig *YigStorage) SetBucketAcl(ctx context.Context, bucketName string, poli
 	return nil
 }
 
-func (yig *YigStorage) SetBucketLc(ctx context.Context, bucketName string, lc datatype.Lc,
+func (yig *YigStorage) SetBucketLifecycle(ctx context.Context, bucketName string, lc lifecycle.Lifecycle,
 	credential common.Credential) error {
 	yig.Logger.Info(ctx, "enter SetBucketLc")
 	bucket, err := yig.MetaStorage.GetBucket(ctx, bucketName, true)
@@ -107,24 +108,21 @@ func (yig *YigStorage) SetBucketLc(ctx context.Context, bucketName string, lc da
 	if bucket.OwnerId != credential.UserId {
 		return ErrBucketAccessForbidden
 	}
-	bucket.LC = lc
-	err = yig.MetaStorage.Client.PutBucket(bucket)
-	if err != nil {
-		return err
-	}
-	if err == nil {
-		yig.MetaStorage.Cache.Remove(redis.BucketTable, meta.BUCKET_CACHE_PREFIX, bucketName)
-	}
+	bucket.Lifecycle = lc
 
-	err = yig.MetaStorage.PutBucketToLifeCycle(ctx, bucket)
-	if err != nil {
-		yig.Logger.Error(ctx, "Error Put bucket to LC table: ", err)
+	helper.Logger.Info(ctx, lc, bucket.Lifecycle)
+
+	// Update bucket LC, and add bucket to table lifecycle.
+	if err = yig.MetaStorage.PutBucketToLifeCycle(ctx, bucket); err != nil {
+		helper.Logger.Error(ctx, err)
 		return err
 	}
+	yig.MetaStorage.Cache.Remove(redis.BucketTable, meta.BUCKET_CACHE_PREFIX, bucketName)
+
 	return nil
 }
 
-func (yig *YigStorage) GetBucketLc(ctx context.Context, bucketName string, credential common.Credential) (lc datatype.Lc,
+func (yig *YigStorage) GetBucketLifecycle(ctx context.Context, bucketName string, credential common.Credential) (lc lifecycle.Lifecycle,
 	err error) {
 	bucket, err := yig.MetaStorage.GetBucket(ctx, bucketName, true)
 	if err != nil {
@@ -134,34 +132,34 @@ func (yig *YigStorage) GetBucketLc(ctx context.Context, bucketName string, crede
 		err = ErrBucketAccessForbidden
 		return
 	}
-	if len(bucket.LC.Rule) == 0 {
+	if bucket.Lifecycle.IsEmpty() {
+		helper.Logger.Error(ctx, "LC empty:", bucket.Lifecycle)
 		err = ErrNoSuchBucketLc
 		return
 	}
-	return bucket.LC, nil
+
+	helper.Logger.Info(ctx, bucket.Lifecycle)
+	return bucket.Lifecycle, nil
 }
 
-func (yig *YigStorage) DelBucketLc(ctx context.Context, bucketName string, credential common.Credential) error {
+func (yig *YigStorage) DelBucketLifecycle(ctx context.Context, bucketName string, credential common.Credential) error {
 	bucket, err := yig.MetaStorage.GetBucket(ctx, bucketName, true)
 	if err != nil {
+		helper.Logger.Error(ctx, err)
 		return err
 	}
 	if bucket.OwnerId != credential.UserId {
 		return ErrBucketAccessForbidden
 	}
-	bucket.LC = datatype.Lc{}
-	err = yig.MetaStorage.Client.PutBucket(bucket)
-	if err != nil {
+
+	bucket.Lifecycle = lifecycle.Lifecycle{}
+	if err = yig.MetaStorage.RemoveBucketFromLifeCycle(ctx, bucket); err != nil {
+		yig.Logger.Error(ctx, err)
 		return err
 	}
-	if err == nil {
-		yig.MetaStorage.Cache.Remove(redis.BucketTable, meta.BUCKET_CACHE_PREFIX, bucketName)
-	}
-	err = yig.MetaStorage.RemoveBucketFromLifeCycle(ctx, bucket)
-	if err != nil {
-		yig.Logger.Error(ctx, "Error Remove bucket From LC table hbase: ", err)
-		return err
-	}
+
+	yig.MetaStorage.Cache.Remove(redis.BucketTable, meta.BUCKET_CACHE_PREFIX, bucketName)
+
 	return nil
 }
 
@@ -472,7 +470,7 @@ func (yig *YigStorage) DeleteBucket(ctx context.Context, bucketName string, cred
 		yig.MetaStorage.Cache.Remove(redis.BucketTable, meta.BUCKET_CACHE_PREFIX, bucketName)
 	}
 
-	if bucket.LC.Rule != nil {
+	if !bucket.Lifecycle.IsEmpty() {
 		err = yig.MetaStorage.RemoveBucketFromLifeCycle(ctx, bucket)
 		if err != nil {
 			yig.Logger.Error(ctx, "Error remove bucket from lifeCycle: ", err)
