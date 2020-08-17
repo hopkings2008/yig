@@ -62,6 +62,7 @@ func getUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b, err := json.Marshal(usageJson{Usage: usage})
+        w.Header().Set("Content-Type", "application/json")
 	w.Write(b)
 	return
 }
@@ -78,6 +79,7 @@ func getBucketInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	b, err := json.Marshal(bucketJson{Bucket: *bucket})
+        w.Header().Set("Content-Type", "application/json")
 	w.Write(b)
 	return
 }
@@ -102,6 +104,7 @@ func getUserInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	b, err := json.Marshal(userJson{Buckets: buckets, Keys: keys})
+        w.Header().Set("Content-Type", "application/json")
 	w.Write(b)
 	return
 }
@@ -118,6 +121,7 @@ func getObjectInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b, err := json.Marshal(objectJson{Object: object})
+        w.Header().Set("Content-Type", "application/json")
 	w.Write(b)
 	return
 }
@@ -127,6 +131,7 @@ func getCacheHitRatio(w http.ResponseWriter, r *http.Request) {
 
 	rate := adminServer.Yig.MetaStorage.Cache.GetCacheHitRatio()
 	b, _ := json.Marshal(cacheJson{HitRate: rate})
+        w.Header().Set("Content-Type", "application/json")
 	w.Write(b)
 	return
 }
