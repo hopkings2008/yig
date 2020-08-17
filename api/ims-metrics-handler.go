@@ -24,6 +24,8 @@ func (api ObjectAPIHandlers) GetImsImageMetricsHandler(w http.ResponseWriter, r 
         vars := mux.Vars(r)
         bucketName := vars["bucket"]
 
+        r = generateIamCtxRequest(r)
+
         // 1. check the auth.
         var err error
         switch signature.GetRequestAuthType(r) {
@@ -51,7 +53,7 @@ func (api ObjectAPIHandlers) GetImsImageMetricsHandler(w http.ResponseWriter, r 
         }
 
         // 3. get metrics from ims and return the result to the client.
-        inputMetrics := &ims.MetricsReq{
+        inputMetrics := &ims.GetImsReq{
                 Bucketname: bucketName,
         }
         MetricsResp, err := imgProcessPlugin.GetImageMetrics(ctx, inputMetrics)
@@ -62,7 +64,7 @@ func (api ObjectAPIHandlers) GetImsImageMetricsHandler(w http.ResponseWriter, r 
                 return
         }
         defer MetricsResp.Reader.Close()
-        w.Header().Set("Content-Type", "application/json")
+        w.Header().Set("Content-Type", MetricsResp.Type)
         w.Header().Set("Content-Length", strconv.FormatInt(MetricsResp.Length, 10))
         n, err := io.Copy(w, MetricsResp.Reader)
         if err != nil {
