@@ -372,7 +372,7 @@ func LifecycleStart() {
 	taskQ = make(chan types.LifeCycle, helper.CONFIG.LcThread)
 
 	numOfWorkers := helper.CONFIG.LcThread
-	sessionString := "Started " + time.Now().Format("2006/01/02 00:00:00") + "-" + strconv.Itoa(sessionId)
+	sessionString := "Started " + time.Now().Format(types.TIME_LAYOUT_TIDB) + "-" + strconv.Itoa(sessionId)
 	sessionId++
 	helper.Logger.Warn(nil, sessionString, "start lc thread:", numOfWorkers)
 
