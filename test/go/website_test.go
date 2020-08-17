@@ -93,6 +93,7 @@ var testUnits = []WebsiteTestUnit{
 		},
 	},
 	// Configure bucket as a website but redirect all requests
+	/*
 	{
 		WebsiteConfiguration: &s3.WebsiteConfiguration{
 			RedirectAllRequestsTo: &s3.RedirectAllRequestsTo{HostName: aws.String("sina.com")},
@@ -107,6 +108,7 @@ var testUnits = []WebsiteTestUnit{
 			{"http://" + TEST_BUCKET + "." + Endpoint + "/index.html", 200, testIndexHTML, true},
 		},
 	},
+	*/
 	// Configure bucket as a website and also specify optional redirection rules
 	{
 		WebsiteConfiguration: &s3.WebsiteConfiguration{
