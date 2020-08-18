@@ -40,5 +40,10 @@
   "ListObjectsHandler": "oss:object:list",
   "ListBucketsHandler": "oss:bucket:list",
   "PutBucketLoggingHandler": "oss:bucket:setLogging",
-  "GetBucketLoggingHandler": "oss:bucket:getLogging"
+  "GetBucketLoggingHandler": "oss:bucket:getLogging",
+  "CreateImsStylesHandler": "oss:ims:createImsStyles",
+  "ListImsStylesHandler": "oss:ims:listImsStyles",
+  "DeleteImsStylesHandler": "oss:ims:deleteImsStyles",
+  "GetImsImageMetricsHandler": "oss:ims:getImsMetrics",
+  "ImageServiceHandler": "oss:ims:imgService"
 }
