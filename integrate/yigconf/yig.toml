@@ -51,8 +51,8 @@ download_buf_pool_size = 524288
 # Stripe Config
 [stripe]
 stripe_object = 67108864
-stripe_unit = 4096
-stripe_num = 2
+stripe_unit = 1048576
+stripe_num = 5
 
 [kms]
 type = "vault"
