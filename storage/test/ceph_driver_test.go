@@ -352,3 +352,247 @@ func (ss *StorageSuite) check(osi types.ObjStoreInfo, offset int64, size int64, 
 	c.Logf("succeed to check ObjStoreInfo(%v) with offset %d, size %d", osi, offset, size)
 	return nil
 }
+
+func (ss *StorageSuite) Benchmark256MCephStorageDriverWrite(c *C) {
+	osi := types.ObjStoreInfo{
+		Type:             types.STORAGE_DRIVER_STRIPE,
+		StripeObjectSize: 64 << 20,
+		StripeUnit:       1 << 20,
+		StripeNum:        5,
+	}
+	ctx := context.Background()
+	meta, err := osi.Encode()
+	c.Assert(err, Equals, nil)
+	totalLen := int64(256 << 20)
+	var objs []string
+	for i := 0; i < c.N; i++ {
+		randomReader := NewRandomReader(totalLen)
+		obj := fmt.Sprintf("%s_%d", "Benchmark256MCephStorageDriverWrite", i)
+		objs = append(objs, obj)
+		n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, randomReader)
+		c.Assert(err, Equals, nil)
+		c.Assert(n, Equals, totalLen)
+	}
+	// remove all the test objects.
+	for _, obj := range objs {
+		err = ss.driver.Delete(ctx, ss.pool, obj, meta, totalLen)
+		c.Assert(err, Equals, nil)
+	}
+}
+
+func (ss *StorageSuite) Benchmark256MLibradosstripeDriverWrite(c *C) {
+	ctx := context.Background()
+	meta := ""
+	totalLen := int64(256 << 20)
+	var objs []string
+	for i := 0; i < c.N; i++ {
+		randomReader := NewRandomReader(totalLen)
+		obj := fmt.Sprintf("%s_%d", "Benchmark256MLibradosstripeDriverWrite", i)
+		objs = append(objs, obj)
+		n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, randomReader)
+		c.Assert(err, Equals, nil)
+		c.Assert(n, Equals, totalLen)
+	}
+	// remove all the test objects.
+	for _, obj := range objs {
+		err := ss.driver.Delete(ctx, ss.pool, obj, meta, totalLen)
+		c.Assert(err, Equals, nil)
+	}
+}
+
+func (ss *StorageSuite) Benchmark128KCephStorageDriverWrite(c *C) {
+	osi := types.ObjStoreInfo{
+		Type:             types.STORAGE_DRIVER_STRIPE,
+		StripeObjectSize: 64 << 20,
+		StripeUnit:       1 << 20,
+		StripeNum:        5,
+	}
+	ctx := context.Background()
+	meta, err := osi.Encode()
+	c.Assert(err, Equals, nil)
+	totalLen := int64(128 << 10)
+	var objs []string
+	for i := 0; i < c.N; i++ {
+		randomReader := NewRandomReader(totalLen)
+		obj := fmt.Sprintf("%s_%d", "Benchmark128KCephStorageDriverWrite", i)
+		objs = append(objs, obj)
+		n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, randomReader)
+		c.Assert(err, Equals, nil)
+		c.Assert(n, Equals, totalLen)
+	}
+	// remove all the test objects.
+	for _, obj := range objs {
+		err = ss.driver.Delete(ctx, ss.pool, obj, meta, totalLen)
+		c.Assert(err, Equals, nil)
+	}
+}
+
+func (ss *StorageSuite) Benchmark128KLibradosstripeDriverWrite(c *C) {
+	ctx := context.Background()
+	meta := ""
+	totalLen := int64(128 << 10)
+	var objs []string
+	for i := 0; i < c.N; i++ {
+		randomReader := NewRandomReader(totalLen)
+		obj := fmt.Sprintf("%s_%d", "Benchmark128KLibradosstripeDriverWrite", i)
+		objs = append(objs, obj)
+		n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, randomReader)
+		c.Assert(err, Equals, nil)
+		c.Assert(n, Equals, totalLen)
+	}
+	// remove all the test objects.
+	for _, obj := range objs {
+		err := ss.driver.Delete(ctx, ss.pool, obj, meta, totalLen)
+		c.Assert(err, Equals, nil)
+	}
+}
+
+func (ss *StorageSuite) Benchmark256MCephStorageDriverRead(c *C) {
+	osi := types.ObjStoreInfo{
+		Type:             types.STORAGE_DRIVER_STRIPE,
+		StripeObjectSize: 64 << 20,
+		StripeUnit:       1 << 20,
+		StripeNum:        5,
+	}
+	ctx := context.Background()
+	meta, err := osi.Encode()
+	c.Assert(err, Equals, nil)
+	totalLen := int64(256 << 20)
+	randomReader := NewRandomReader(totalLen)
+	obj := fmt.Sprintf("%s", "Benchmark256MCephStorageDriverRead")
+	n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, randomReader)
+	c.Assert(err, Equals, nil)
+	c.Assert(n, Equals, totalLen)
+	for i := 0; i < c.N; i++ {
+		reader, err := ss.driver.Read(ctx, ss.pool, obj, meta, 0, totalLen)
+		c.Assert(err, Equals, nil)
+		totalRead := int64(0)
+		for totalRead < totalLen {
+			buf := make([]byte, 1<<20)
+			n, err := reader.Read(buf)
+			if err == nil {
+				totalRead += int64(n)
+				continue
+			}
+			if err == io.EOF {
+				totalRead += int64(n)
+				break
+			}
+			//error
+			c.Assert(err, Not(Equals), nil)
+		}
+		c.Assert(totalRead, Equals, totalLen)
+	}
+	// remove all the test objects.
+	err = ss.driver.Delete(ctx, ss.pool, obj, meta, totalLen)
+	c.Assert(err, Equals, nil)
+}
+
+func (ss *StorageSuite) Benchmark256MLibradosstripeDriverRead(c *C) {
+	ctx := context.Background()
+	meta := ""
+	totalLen := int64(256 << 20)
+	randomReader := NewRandomReader(totalLen)
+	obj := fmt.Sprintf("%s", "Benchmark256MLibradosstripeDriverRead")
+	n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, randomReader)
+	c.Assert(err, Equals, nil)
+	c.Assert(n, Equals, totalLen)
+	for i := 0; i < c.N; i++ {
+		reader, err := ss.driver.Read(ctx, ss.pool, obj, meta, 0, totalLen)
+		c.Assert(err, Equals, nil)
+		totalRead := int64(0)
+		for totalRead < totalLen {
+			buf := make([]byte, 1<<20)
+			n, err := reader.Read(buf)
+			if err == nil {
+				totalRead += int64(n)
+				continue
+			}
+			if err == io.EOF {
+				totalRead += int64(n)
+				break
+			}
+			//error
+			c.Assert(err, Not(Equals), nil)
+		}
+		c.Assert(totalRead, Equals, totalLen)
+	}
+	// remove all the test objects.
+	err = ss.driver.Delete(ctx, ss.pool, obj, meta, totalLen)
+	c.Assert(err, Equals, nil)
+}
+
+func (ss *StorageSuite) Benchmark128KCephStorageDriverRead(c *C) {
+	osi := types.ObjStoreInfo{
+		Type:             types.STORAGE_DRIVER_STRIPE,
+		StripeObjectSize: 64 << 20,
+		StripeUnit:       1 << 20,
+		StripeNum:        5,
+	}
+	ctx := context.Background()
+	meta, err := osi.Encode()
+	c.Assert(err, Equals, nil)
+	totalLen := int64(128 << 10)
+	randomReader := NewRandomReader(totalLen)
+	obj := fmt.Sprintf("%s", "Benchmark256MCephStorageDriverRead")
+	n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, randomReader)
+	c.Assert(err, Equals, nil)
+	c.Assert(n, Equals, totalLen)
+	for i := 0; i < c.N; i++ {
+		reader, err := ss.driver.Read(ctx, ss.pool, obj, meta, 0, totalLen)
+		c.Assert(err, Equals, nil)
+		totalRead := int64(0)
+		for totalRead < totalLen {
+			buf := make([]byte, 1<<20)
+			n, err := reader.Read(buf)
+			if err == nil {
+				totalRead += int64(n)
+				continue
+			}
+			if err == io.EOF {
+				totalRead += int64(n)
+				break
+			}
+			//error
+			c.Assert(err, Not(Equals), nil)
+		}
+		c.Assert(totalRead, Equals, totalLen)
+	}
+	// remove all the test objects.
+	err = ss.driver.Delete(ctx, ss.pool, obj, meta, totalLen)
+	c.Assert(err, Equals, nil)
+}
+
+func (ss *StorageSuite) Benchmark128KLibradosstripeDriverRead(c *C) {
+	ctx := context.Background()
+	meta := ""
+	totalLen := int64(128 << 10)
+	randomReader := NewRandomReader(totalLen)
+	obj := fmt.Sprintf("%s", "Benchmark256MLibradosstripeDriverRead")
+	n, err := ss.driver.Write(ctx, ss.pool, obj, meta, 0, randomReader)
+	c.Assert(err, Equals, nil)
+	c.Assert(n, Equals, totalLen)
+	for i := 0; i < c.N; i++ {
+		reader, err := ss.driver.Read(ctx, ss.pool, obj, meta, 0, totalLen)
+		c.Assert(err, Equals, nil)
+		totalRead := int64(0)
+		for totalRead < totalLen {
+			buf := make([]byte, 1<<20)
+			n, err := reader.Read(buf)
+			if err == nil {
+				totalRead += int64(n)
+				continue
+			}
+			if err == io.EOF {
+				totalRead += int64(n)
+				break
+			}
+			//error
+			c.Assert(err, Not(Equals), nil)
+		}
+		c.Assert(totalRead, Equals, totalLen)
+	}
+	// remove all the test objects.
+	err = ss.driver.Delete(ctx, ss.pool, obj, meta, totalLen)
+	c.Assert(err, Equals, nil)
+}
