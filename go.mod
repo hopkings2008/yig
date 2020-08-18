@@ -29,6 +29,8 @@ replace (
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Sirupsen/logrus v0.0.0-20170822132746-89742aefa4b2 // indirect
+	github.com/bitly/go-simplejson v0.5.0
+	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/cannium/gohbase v0.0.0-20170302080057-636e2cfdbc29
 	github.com/cep21/circuit v0.0.0-20181030180945-e893c027dc21
 	github.com/confluentinc/confluent-kafka-go v1.0.0 //indirect
@@ -41,8 +43,11 @@ require (
 	github.com/hashicorp/vault/api v1.0.2
 	github.com/journeymidnight/aws-sdk-go v1.17.5
 	github.com/journeymidnight/radoshttpd v0.0.0-20190617133011-609666b51136
+	github.com/kr/pretty v0.2.1 // indirect
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
+	github.com/robfig/cron v1.2.0
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
+	github.com/stretchr/testify v1.3.0
 	github.com/ugorji/go v1.1.4
 	github.com/woclouds3/radoshttpd v0.0.0-20200707013832-cb721adad20a
 	github.com/xxtea/xxtea-go v0.0.0-20170828040851-35c4b17eecf6
