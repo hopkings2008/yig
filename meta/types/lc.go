@@ -1,8 +1,18 @@
 package types
 
+import (
+	"time"
+)
+
+const (
+	LcEnding  = "Ending"
+	LcPending = "Pending"
+)
+
 type LifeCycle struct {
-	BucketName string
-	Status     string // status of this entry, in Pending/Deleting
+	BucketName      string
+	Status          string // status of this entry, in Pending/Deleting
+	LastScannedTime time.Time
 }
 
 type ScanLifeCycleResult struct {
@@ -29,4 +39,10 @@ func (lc LifeCycle) GetValuesForDelete() map[string]map[string][]byte {
 	return map[string]map[string][]byte{
 		LIFE_CYCLE_COLUMN_FAMILY: map[string][]byte{},
 	}
+}
+
+func (lc *LifeCycle) GetCreateLifeCycle() (string, []interface{}) {
+	sql := "insert into lifecycle(bucketname,status,lastscannedtime) values (?,?,?);"
+	args := []interface{}{lc.BucketName, lc.Status, lc.LastScannedTime.Unix()}
+	return sql, args
 }

@@ -83,7 +83,7 @@ func Test_ListObjectVersionsWithMaxKey(t *testing.T) {
 		var result *[][]string
 		var isTruncated bool
 
-		result, _, isTruncated, keyMarker, versionIdMarker, err = sc.ListObjectVersions(TEST_BUCKET, keyMarker, versionIdMarker, "", "", maxKeys)
+		result, _, _, isTruncated, keyMarker, versionIdMarker, err = sc.ListObjectVersions(TEST_BUCKET, keyMarker, versionIdMarker, "", "", maxKeys)
 		if err != nil {
 			t.Fatal("ListObjectVersions err:", err)
 			panic(err)
@@ -274,7 +274,7 @@ func ListObjectVersionsWithDelimiterHelper(t *testing.T, sc *S3Client, dirNum, d
 	versionKeyMap := map[string]string{}
 	for keyVersionList, dirList, isTruncated, keyMarker, versionIdMarker := &[][]string{}, &[]string{}, true, "", ""; isTruncated; {
 		var err error
-		keyVersionList, dirList, isTruncated, keyMarker, versionIdMarker, err = sc.ListObjectVersions(TEST_BUCKET, keyMarker, versionIdMarker, "", delimiter, int64(maxKeys))
+		keyVersionList, _, dirList, isTruncated, keyMarker, versionIdMarker, err = sc.ListObjectVersions(TEST_BUCKET, keyMarker, versionIdMarker, "", delimiter, int64(maxKeys))
 		if err != nil {
 			t.Fatal("ListObjectVersions err:", err)
 			panic(err)
@@ -296,7 +296,7 @@ func ListObjectVersionsWithDelimiterHelper(t *testing.T, sc *S3Client, dirNum, d
 	for _, commonPrefix := range versionedDirList {
 		for keyVersionList, dirList, isTruncated, keyMarker, versionIdMarker := &[][]string{}, &[]string{}, true, commonPrefix, ""; isTruncated; {
 			var err error
-			keyVersionList, dirList, isTruncated, keyMarker, versionIdMarker, err = sc.ListObjectVersions(TEST_BUCKET, keyMarker, versionIdMarker, commonPrefix, delimiter, int64(maxKeys))
+			keyVersionList, _, dirList, isTruncated, keyMarker, versionIdMarker, err = sc.ListObjectVersions(TEST_BUCKET, keyMarker, versionIdMarker, commonPrefix, delimiter, int64(maxKeys))
 			if err != nil || len(*dirList) != 0 {
 				t.Fatal("ListObjectVersions failed for:", TEST_BUCKET, keyMarker, versionIdMarker, commonPrefix, delimiter, maxKeys)
 			}

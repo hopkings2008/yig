@@ -40,13 +40,15 @@ type Config struct {
 	GcThread               int           `toml:"gc_thread"`
 	LcThread               int           //used for tools/lc only, set worker numbers to do lc
 	LcDebug                bool          //used for tools/lc only, if this was set true, will treat days as seconds
-	LogLevel               string        `toml:"log_level"` // "info", "warn", "error"
+	LogLevel               string        `toml:"log_level"`    // "info", "warn", "error"
+	LcLogLevel             string        `toml:"lc_log_level"` // "info", "warn", "error"
 	CephConfigPattern      string        `toml:"ceph_config_pattern"`
 	ReservedOrigins        string        `toml:"reserved_origins"` // www.ccc.com,www.bbb.com,127.0.0.1
 	MetaStore              string        `toml:"meta_store"`
 	TidbInfo               string        `toml:"tidb_info"`
 	KeepAlive              bool          `toml:"keepalive"`
 
+	LifecycleSpec string `toml:"lifecycle_spec"` // use for Lifecycle timing
 	//About cache
 	RedisAddress            string   `toml:"redis_address"`           // redis connection string, e.g localhost:1234
 	RedisConnectionNumber   int      `toml:"redis_connection_number"` // number of connections to redis(i.e max concurrent request number)
@@ -178,8 +180,10 @@ func MarshalTOMLConfig() error {
 	CONFIG.LcThread = Ternary(c.LcThread == 0,
 		1, c.LcThread).(int)
 	CONFIG.LogLevel = Ternary(len(c.LogLevel) == 0, "info", c.LogLevel).(string)
+	CONFIG.LcLogLevel = Ternary(len(c.LcLogLevel) == 0, "warn", c.LcLogLevel).(string)
 	CONFIG.MetaStore = Ternary(c.MetaStore == "", "tidb", c.MetaStore).(string)
 
+	CONFIG.LifecycleSpec = Ternary(c.LifecycleSpec == "", "@midnight", c.LifecycleSpec).(string)
 	CONFIG.RedisAddress = c.RedisAddress
 	CONFIG.RedisPassword = c.RedisPassword
 	CONFIG.RedisMode = c.RedisMode

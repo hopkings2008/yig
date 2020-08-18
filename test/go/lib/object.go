@@ -86,6 +86,20 @@ func (s3client *S3Client) GetObject(bucketName, key string) (value string, err e
 	return string(data), err
 }
 
+func (s3client *S3Client) GetObjectVersion(bucketName, key, versionId string) (value string, err error) {
+	params := &s3.GetObjectInput{
+		Bucket:    aws.String(bucketName),
+		Key:       aws.String(key),
+		VersionId: aws.String(versionId),
+	}
+	out, err := s3client.Client.GetObject(params)
+	if err != nil {
+		return "", err
+	}
+	data, err := ioutil.ReadAll(out.Body)
+	return string(data), err
+}
+
 func (s3client *S3Client) GetObjectOutPut(bucketName, key string) (out *s3.GetObjectOutput, err error) {
 	params := &s3.GetObjectInput{
 		Bucket: aws.String(bucketName),

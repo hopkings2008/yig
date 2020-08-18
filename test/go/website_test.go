@@ -93,7 +93,7 @@ var testUnits = []WebsiteTestUnit{
 		},
 	},
 	// Configure bucket as a website but redirect all requests
-	/*
+	/* Should run if there is internet.
 	{
 		WebsiteConfiguration: &s3.WebsiteConfiguration{
 			RedirectAllRequestsTo: &s3.RedirectAllRequestsTo{HostName: aws.String("sina.com")},

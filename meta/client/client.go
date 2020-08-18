@@ -15,7 +15,7 @@ type Client interface {
 	CommitTrans(tx interface{}) error
 	//object
 	GetObject(bucketName, objectName, version string) (object *Object, err error)
-	GetAllObject(bucketName, objectName, version string, maxKeys int) (object []*Object, err error)
+	GetAllObject(bucketName, objectName, rawVersionId, s3VersionId string, maxKeys int, reverseOrder bool) (object []*Object, err error)
 	PutObject(object *Object, tx interface{}) error
 	UpdateAppendObject(object *Object, versionId string) error
 	UpdateObjectAttrs(object *Object) error
@@ -44,7 +44,7 @@ type Client interface {
 	//cluster
 	GetCluster(fsid, pool string) (cluster Cluster, err error)
 	//lc
-	PutBucketToLifeCycle(ctx context.Context, lifeCycle LifeCycle) error
+	PutBucketToLifeCycle(ctx context.Context, bucket *Bucket) error
 	RemoveBucketFromLifeCycle(ctx context.Context, bucket *Bucket) error
 	ScanLifeCycle(ctx context.Context, limit int, marker string) (result ScanLifeCycleResult, err error)
 	//user

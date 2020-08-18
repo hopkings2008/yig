@@ -58,7 +58,7 @@ func (t *TidbClient) GetBucket(bucketName string) (bucket *Bucket, err error) {
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal([]byte(lc), &tmp.LC)
+	err = tmp.TranslateOldLCIfAny(lc)
 	if err != nil {
 		return
 	}
@@ -130,7 +130,7 @@ func (t *TidbClient) GetBuckets() (buckets []*Bucket, err error) {
 		if err != nil {
 			return
 		}
-		err = json.Unmarshal([]byte(lc), &tmp.LC)
+		err = tmp.TranslateOldLCIfAny(lc)
 		if err != nil {
 			return
 		}
@@ -350,7 +350,6 @@ func (t *TidbClient) ListObjectsNoVersion(ctx context.Context, bucketName, marke
 // ListObjects and ListObjectVersions for both versioning Enabled and Suspended buckets.
 // !versioned for ListObjects.
 // versioned for ListObjectVersions.
-// TODO: should keep withDeleteMarker??
 func (t *TidbClient) ListObjectsVersionedBucket(ctx context.Context, bucketName, marker, verIdMarker, prefix, delimiter string, versioned bool, maxKeys int, withDeleteMarker bool) (retObjects []*Object, prefixes []string, truncated bool, nextMarker, nextVerIdMarker string, err error) {
 	var count int
 	var exit bool
@@ -422,7 +421,10 @@ func (t *TidbClient) ListObjectsVersionedBucket(ctx context.Context, bucketName,
 		}
 
 		if !versioned {
-			sqltext += " and islatest=1 and deletemarker=0"
+			sqltext += " and islatest=1"
+		}
+		if !withDeleteMarker {
+			sqltext += " and deletemarker=0"
 		}
 
 		if delimiter != "" {
@@ -676,7 +678,7 @@ func (t *TidbClient) ListObjectVersionsWithDelimiter(ctx context.Context, bucket
 
 			// Get all the object versions including deletemarker.
 			var objectList []*Object
-			objectList, err = t.GetAllObject(bucketname, name, rawVersionIdMarker, selectLimit-count)
+			objectList, err = t.GetAllObject(bucketname, name, rawVersionIdMarker, "", selectLimit-count, false)
 			if err != nil {
 				helper.Logger.Error(nil, fmt.Sprintf("ListObjects: failed to GetAllObject(%s, %s), err: %v", bucketname, name, err))
 				rows.Close()

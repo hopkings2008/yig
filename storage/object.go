@@ -1022,7 +1022,7 @@ func (yig *YigStorage) getObjWithVersion(ctx context.Context, bucketName, object
 
 func (yig *YigStorage) removeAllObjectsEntryByName(ctx context.Context, bucketName, objectName string, isVersioning bool) (err error) {
 
-	objs, err := yig.MetaStorage.GetAllObject(bucketName, objectName)
+	objs, err := yig.MetaStorage.GetAllObject(bucketName, objectName, "", 0, false)
 	if err == ErrNoSuchKey {
 		return nil
 	}

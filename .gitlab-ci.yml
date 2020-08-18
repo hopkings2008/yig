@@ -51,4 +51,3 @@ after_script:
   - ls
   - make clean
   - docker rm -f yig
-  - docker rm -f lc

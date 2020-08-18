@@ -22,6 +22,7 @@ import (
 
 	"github.com/journeymidnight/yig/api/datatype"
 	"github.com/journeymidnight/yig/api/datatype/policy"
+	"github.com/journeymidnight/yig/api/datatype/lifecycle"
 	"github.com/journeymidnight/yig/iam/common"
 	meta "github.com/journeymidnight/yig/meta/types"
 )
@@ -30,10 +31,10 @@ import (
 type ObjectLayer interface {
 	// Bucket operations.
 	MakeBucket(ctx context.Context, bucket string, acl datatype.Acl, credential common.Credential) error
-	SetBucketLc(ctx context.Context, bucket string, config datatype.Lc,
+	SetBucketLifecycle(ctx context.Context, bucket string, config lifecycle.Lifecycle,
 		credential common.Credential) error
-	GetBucketLc(ctx context.Context, bucket string, credential common.Credential) (datatype.Lc, error)
-	DelBucketLc(ctx context.Context, bucket string, credential common.Credential) error
+	GetBucketLifecycle(ctx context.Context, bucket string, credential common.Credential) (lifecycle.Lifecycle, error)
+	DelBucketLifecycle(ctx context.Context, bucket string, credential common.Credential) error
 	SetBucketAcl(ctx context.Context, bucket string, policy datatype.AccessControlPolicy, acl datatype.Acl,
 		credential common.Credential) error
 	GetBucketAcl(ctx context.Context, bucket string, credential common.Credential) (datatype.AccessControlPolicyResponse, error)

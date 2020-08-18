@@ -69,7 +69,7 @@ func recordLogging(r *http.Request, code int, start time.Time, duration int64) {
 		}
 	}
 
-	if ctx.BucketInfo == nil && ctx.ObjectName == "" {
+	if ctx.BucketInfo == nil || ctx.ObjectName == "" {
 		return
 	}
 
