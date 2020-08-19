@@ -33,9 +33,9 @@ func (p ByPartNum) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 func (ps *PerfSuite) TestMultipartLimitation(c *C) {
 	bn := "multiparttests"
 	key := "objt1"
-	endpoint := "http://obs-langfang.wocloud.cn"
-	ak := "HVYTQKLDRr4GTIph1UJL"
-	sk := "i8Xvm01YPlXVBcVWxz34PQDhp0fl9uhmi3yGUt7f"
+	endpoint := "http://s3.test.com"
+	ak := "hehehehe"
+	sk := "hehehehe"
 	region := "cn-bj-1"
 	sc := NewS3WithCred(endpoint, ak, sk, region)
 	//sc := NewS3()
