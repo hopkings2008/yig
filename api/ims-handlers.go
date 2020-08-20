@@ -38,6 +38,9 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 	vars := mux.Vars(r)
 	bucketName = vars["bucket"]
 	objectName = vars["object"]
+
+        r = generateIamCtxRequest(r)
+
 	// 1. check the auth & get object meta info.
 	obj, err := api.getObjectInfoFromReq(ctx, bucketName, objectName, r)
 	if err != nil {
