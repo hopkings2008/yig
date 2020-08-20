@@ -1318,6 +1318,7 @@ func Test_LifeCycle_Abnormal_Config(t *testing.T) {
 	t.Log("Config lifecycle", len(lifecycleConfiguration.Rules), "rejected as expected!", err)
 }
 
+/*
 // Test scan bucket in lc.go.
 func Test_LifeCycle_200_Buckets(t *testing.T) {
 	sc := NewS3ForcePathStyle()
@@ -1607,6 +1608,7 @@ func Test_LifeCycle_Abort4000IncompleteMultipart(t *testing.T) {
 		t.Fatal("Upload should be deleted!", bucketName, result.Uploads)
 	}
 }
+*/
 
 func cleanup(t *testing.T, sc *S3Client, bucketName string) {
 	if err := sc.DeleteBucketAllObjectVersions(bucketName); err != nil {
