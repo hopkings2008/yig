@@ -80,7 +80,7 @@ func Test_LifeCycle_Basic_Rules(t *testing.T) {
 
 			for _, rule := range tc.LifecycleConfiguration.Rules {
 				status := aws.StringValue(rule.Status)
-				prefix := aws.StringValue(rule.Filter.Prefix)
+				prefix := aws.StringValue(getPrefix(rule))
 
 				// Object match prefix.
 				for i := 0; i < tc.CurrentObjectExpiredPerRule; i++ {
@@ -121,7 +121,7 @@ func Test_LifeCycle_Basic_Rules(t *testing.T) {
 
 			for _, rule := range tc.LifecycleConfiguration.Rules {
 				status := aws.StringValue(rule.Status)
-				prefix := aws.StringValue(rule.Filter.Prefix)
+				prefix := aws.StringValue(getPrefix(rule))
 
 				// Object match prefix.
 				for i := 0; i < tc.ObjectMatchPerRule; i++ {
@@ -166,7 +166,7 @@ func Test_LifeCycle_Basic_Rules(t *testing.T) {
 
 		for _, rule := range tc.LifecycleConfiguration.Rules {
 			status := aws.StringValue(rule.Status)
-			prefix := aws.StringValue(rule.Filter.Prefix)
+			prefix := aws.StringValue(getPrefix(rule))
 
 			// Multipart match prefix.
 			for i := 0; i < tc.MultipartExpiredPerRule; i++ {
@@ -208,7 +208,7 @@ func Test_LifeCycle_Basic_Rules(t *testing.T) {
 			}
 
 			for _, rule := range tc.LifecycleConfiguration.Rules {
-				prefix := aws.StringValue(rule.Filter.Prefix)
+				prefix := aws.StringValue(getPrefix(rule))
 
 				// Objects match prefix, but should not expired this time.
 				// Start after index of expired objects in this bucket.
@@ -229,7 +229,7 @@ func Test_LifeCycle_Basic_Rules(t *testing.T) {
 			}
 
 			for _, rule := range tc.LifecycleConfiguration.Rules {
-				prefix := aws.StringValue(rule.Filter.Prefix)
+				prefix := aws.StringValue(getPrefix(rule))
 
 				for i := 0; i < tc.ObjectMatchPerRule; i++ {
 					key := prefix + strconv.Itoa(i)
@@ -249,7 +249,7 @@ func Test_LifeCycle_Basic_Rules(t *testing.T) {
 		// Multipart should not expired.
 		notExpiredIncompleteMultipartList := notExpiredIncompleteMultipartListMap[bucketName]
 		for _, rule := range tc.LifecycleConfiguration.Rules {
-			prefix := aws.StringValue(rule.Filter.Prefix)
+			prefix := aws.StringValue(getPrefix(rule))
 
 			// Multipart match prefix.
 			for i := 0; i < tc.MultipartMatchNotExpiredPerRule; i++ {
@@ -321,6 +321,26 @@ func generateLCTestCases() (TCList []LCTestCase) {
 			},
 		},
 	})
+	// Use deprecated Prefix, rather than Filter>Prefix in this case.
+	TCList = append(TCList, LCTestCase{
+		"1rulenoversioningprefix",
+		false,   // Versioning Disabled.
+		2, 0, 0, // 2 expired, 0 match but not expired, 0 not match.
+		0, 0, 0, 0, 0,
+		0, 0, 0,
+		&s3.BucketLifecycleConfiguration{
+			Rules: []*s3.LifecycleRule{
+				{
+					Expiration: &s3.LifecycleExpiration{
+						Days: aws.Int64(10),
+					},
+					Prefix: aws.String("1"),
+					ID:     aws.String("1RuleNoVersioning"),
+					Status: aws.String("Enabled"),
+				},
+			},
+		},
+	})
 
 	// TC2: 1 enabled Rule. Should delete matching 2 objects, and leave no matching 3 objects.
 	TCList = append(TCList, LCTestCase{
@@ -344,6 +364,25 @@ func generateLCTestCases() (TCList []LCTestCase) {
 			},
 		},
 	})
+	TCList = append(TCList, LCTestCase{
+		"2rulenoversioningprefix",
+		false,   // Versioning Disabled.
+		2, 0, 3, // 2 expired, 0 match but not expired, 3 not match.
+		0, 0, 0, 0, 0,
+		0, 0, 0,
+		&s3.BucketLifecycleConfiguration{
+			Rules: []*s3.LifecycleRule{
+				{
+					Expiration: &s3.LifecycleExpiration{
+						Days: aws.Int64(10),
+					},
+					Prefix: aws.String("1"),
+					ID:     aws.String("1RuleNoVersioning"),
+					Status: aws.String("Enabled"),
+				},
+			},
+		},
+	})
 
 	// TC3: 1 default Rule. Should delete 3 objects, and leave 2 not expired object.
 	TCList = append(TCList, LCTestCase{
@@ -361,6 +400,25 @@ func generateLCTestCases() (TCList []LCTestCase) {
 					Filter: &s3.LifecycleRuleFilter{
 						Prefix: aws.String(""),
 					},
+					ID:     aws.String("1DefaultRuleNoVersioning"),
+					Status: aws.String("Enabled"),
+				},
+			},
+		},
+	})
+	TCList = append(TCList, LCTestCase{
+		"3defaultrulenoversioningprefix",
+		false,
+		3, 2, 0,
+		0, 0, 0, 0, 0,
+		0, 0, 0,
+		&s3.BucketLifecycleConfiguration{
+			Rules: []*s3.LifecycleRule{
+				{
+					Expiration: &s3.LifecycleExpiration{
+						Days: aws.Int64(TEST_LC_START_INTERVAL + 20),
+					},
+					Prefix: aws.String(""),
 					ID:     aws.String("1DefaultRuleNoVersioning"),
 					Status: aws.String("Enabled"),
 				},
@@ -490,6 +548,25 @@ func generateLCTestCases() (TCList []LCTestCase) {
 			},
 		},
 	})
+	TCList = append(TCList, LCTestCase{
+		"6-one-enabled-versioning-prefix",
+		true, // Versioning Enabled.
+		0, 0, 0,
+		1, 2, 0, 0, 0, // 1 object 1 version expired, 0 match but not expired, 1 current version, 0 not match.
+		0, 0, 0,
+		&s3.BucketLifecycleConfiguration{
+			Rules: []*s3.LifecycleRule{
+				{
+					NoncurrentVersionExpiration: &s3.NoncurrentVersionExpiration{
+						NoncurrentDays: aws.Int64(10),
+					},
+					Prefix: aws.String("1"),
+					ID:     aws.String("6RuleVersioning"),
+					Status: aws.String("Enabled"),
+				},
+			},
+		},
+	})
 
 	// TC6.2: just to verify won't delete current version. Should not delete any object.
 	TCList = append(TCList, LCTestCase{
@@ -553,7 +630,7 @@ func generateLCTestCases() (TCList []LCTestCase) {
 					Filter: &s3.LifecycleRuleFilter{
 						Prefix: aws.String(""),
 					},
-					ID:     aws.String("TC8-2"),
+					ID:     aws.String("TC8-1"),
 					Status: aws.String("Enabled"),
 				},
 			},
@@ -597,9 +674,9 @@ func generateLCTestCases() (TCList []LCTestCase) {
 						NoncurrentDays: aws.Int64(TEST_LC_START_INTERVAL + 25),
 					},
 					Filter: &s3.LifecycleRuleFilter{
-						Prefix: aws.String("TC10prefix"),
+						Prefix: aws.String("TC9prefix"),
 					},
-					ID:     aws.String("TC10_enabled"),
+					ID:     aws.String("TC9_enabled"),
 					Status: aws.String("Enabled"),
 				},
 				{
@@ -609,7 +686,7 @@ func generateLCTestCases() (TCList []LCTestCase) {
 					Filter: &s3.LifecycleRuleFilter{
 						Prefix: aws.String(""),
 					},
-					ID:     aws.String("TC10_disabled"),
+					ID:     aws.String("TC9_disabled"),
 					Status: aws.String("Disabled"),
 				},
 			},
@@ -681,6 +758,25 @@ func generateLCTestCases() (TCList []LCTestCase) {
 			},
 		},
 	})
+	TCList = append(TCList, LCTestCase{
+		"1rulemultipart-prefix",
+		false, // Versioning Disabled.
+		0, 0, 0,
+		0, 0, 0, 0, 0,
+		1, 0, 0,
+		&s3.BucketLifecycleConfiguration{
+			Rules: []*s3.LifecycleRule{
+				{
+					AbortIncompleteMultipartUpload: &s3.AbortIncompleteMultipartUpload{
+						DaysAfterInitiation: aws.Int64(10),
+					},
+					Prefix: aws.String("multipart"),
+					ID:     aws.String("TestAbortIncompleteMultipartUpload"),
+					Status: aws.String("Enabled"),
+				},
+			},
+		},
+	})
 
 	// TC12: 1 bucket, 3 incomplete multipart. Should expired.
 	TCList = append(TCList, LCTestCase{
@@ -698,6 +794,25 @@ func generateLCTestCases() (TCList []LCTestCase) {
 					Filter: &s3.LifecycleRuleFilter{
 						Prefix: aws.String("multipart"),
 					},
+					ID:     aws.String("TestAbortIncompleteMultipartUpload"),
+					Status: aws.String("Enabled"),
+				},
+			},
+		},
+	})
+	TCList = append(TCList, LCTestCase{
+		"1rule3multipart-prefix",
+		false, // Versioning Disabled.
+		0, 0, 0,
+		0, 0, 0, 0, 0,
+		3, 0, 0,
+		&s3.BucketLifecycleConfiguration{
+			Rules: []*s3.LifecycleRule{
+				{
+					AbortIncompleteMultipartUpload: &s3.AbortIncompleteMultipartUpload{
+						DaysAfterInitiation: aws.Int64(10),
+					},
+					Prefix: aws.String("multipart"),
 					ID:     aws.String("TestAbortIncompleteMultipartUpload"),
 					Status: aws.String("Enabled"),
 				},
@@ -727,6 +842,25 @@ func generateLCTestCases() (TCList []LCTestCase) {
 			},
 		},
 	})
+	TCList = append(TCList, LCTestCase{
+		"1rulenotmatchmultipart-prefix",
+		false, // Versioning Disabled.
+		0, 0, 0,
+		0, 0, 0, 0, 0,
+		0, 0, 1,
+		&s3.BucketLifecycleConfiguration{
+			Rules: []*s3.LifecycleRule{
+				{
+					AbortIncompleteMultipartUpload: &s3.AbortIncompleteMultipartUpload{
+						DaysAfterInitiation: aws.Int64(10),
+					},
+					Prefix: aws.String("multipart"),
+					ID:     aws.String("TestAbortIncompleteMultipartUpload"),
+					Status: aws.String("Enabled"),
+				},
+			},
+		},
+	})
 
 	// TC14: 1 bucket, 1 default match incomplete multipart. Should expired.
 	TCList = append(TCList, LCTestCase{
@@ -744,6 +878,25 @@ func generateLCTestCases() (TCList []LCTestCase) {
 					Filter: &s3.LifecycleRuleFilter{
 						Prefix: aws.String(""),
 					},
+					ID:     aws.String("TestAbortIncompleteMultipartUpload"),
+					Status: aws.String("Enabled"),
+				},
+			},
+		},
+	})
+	TCList = append(TCList, LCTestCase{
+		"1defaultrulemultipart-prefix",
+		false, // Versioning Disabled.
+		0, 0, 0,
+		0, 0, 0, 0, 0,
+		1, 0, 0,
+		&s3.BucketLifecycleConfiguration{
+			Rules: []*s3.LifecycleRule{
+				{
+					AbortIncompleteMultipartUpload: &s3.AbortIncompleteMultipartUpload{
+						DaysAfterInitiation: aws.Int64(10),
+					},
+					Prefix: aws.String(""),
 					ID:     aws.String("TestAbortIncompleteMultipartUpload"),
 					Status: aws.String("Enabled"),
 				},
@@ -1120,10 +1273,51 @@ func Test_LifeCycle_Abnormal_Config(t *testing.T) {
 		t.Fatal("PutBucketLifecycle", len(lifecycleConfiguration.Rules), "rules failed!", TEST_BUCKET, lifecycleConfiguration)
 	}
 
+	// Duplicated Rule ID, should fail.
+	lifecycleConfiguration.Rules = lifecycleConfiguration.Rules[:0]
+	lifecycleConfiguration.Rules = append(lifecycleConfiguration.Rules, &s3.LifecycleRule{
+		ID: aws.String("1"),
+		Filter: &s3.LifecycleRuleFilter{
+			Prefix: aws.String("1"),
+		},
+		Status: aws.String("Enabled"),
+	})
+	lifecycleConfiguration.Rules = append(lifecycleConfiguration.Rules, &s3.LifecycleRule{
+		ID: aws.String("1"),
+		Filter: &s3.LifecycleRuleFilter{
+			Prefix: aws.String("2"),
+		},
+		Status: aws.String("Enabled"),
+	})
+	_, err = sc.Client.PutBucketLifecycleConfiguration(&s3.PutBucketLifecycleConfigurationInput{
+		Bucket:                 aws.String(TEST_BUCKET),
+		LifecycleConfiguration: &lifecycleConfiguration,
+	})
+	if err == nil {
+		t.Fatal("PutBucketLifecycle", len(lifecycleConfiguration.Rules), "rules failed!", TEST_BUCKET, lifecycleConfiguration)
+	}
+
+	// Duplicated Prefix and Filter>Prefix, should fail.
+	lifecycleConfiguration.Rules = lifecycleConfiguration.Rules[:0]
+	lifecycleConfiguration.Rules = append(lifecycleConfiguration.Rules, &s3.LifecycleRule{
+		ID: aws.String("1"),
+		Filter: &s3.LifecycleRuleFilter{
+			Prefix: aws.String("1"),
+		},
+		Prefix: aws.String("1"),
+		Status: aws.String("Enabled"),
+	})
+	_, err = sc.Client.PutBucketLifecycleConfiguration(&s3.PutBucketLifecycleConfigurationInput{
+		Bucket:                 aws.String(TEST_BUCKET),
+		LifecycleConfiguration: &lifecycleConfiguration,
+	})
+	if err == nil {
+		t.Fatal("PutBucketLifecycle", len(lifecycleConfiguration.Rules), "rules failed!", TEST_BUCKET, lifecycleConfiguration)
+	}
+
 	t.Log("Config lifecycle", len(lifecycleConfiguration.Rules), "rejected as expected!", err)
 }
 
-/*
 // Test scan bucket in lc.go.
 func Test_LifeCycle_200_Buckets(t *testing.T) {
 	sc := NewS3ForcePathStyle()
@@ -1357,7 +1551,7 @@ func Test_LifeCycle_4000_Object_Versions(t *testing.T) {
 		}
 	}
 
-	startLC(t, 280)
+	startLC(t, 360)
 
 	countObjectVersions(t, sc, bucketName, prefix, 0, 1, 0)
 }
@@ -1413,7 +1607,6 @@ func Test_LifeCycle_Abort4000IncompleteMultipart(t *testing.T) {
 		t.Fatal("Upload should be deleted!", bucketName, result.Uploads)
 	}
 }
-*/
 
 func cleanup(t *testing.T, sc *S3Client, bucketName string) {
 	if err := sc.DeleteBucketAllObjectVersions(bucketName); err != nil {
@@ -1668,4 +1861,11 @@ func countObjectVersions(t *testing.T, s3client *S3Client, bucketName, key strin
 	}
 
 	return
+}
+
+func getPrefix(rule *s3.LifecycleRule) *string {
+	if rule.Filter != nil && rule.Filter.Prefix != nil && aws.StringValue(rule.Filter.Prefix) != "" {
+		return rule.Filter.Prefix
+	}
+	return rule.Prefix
 }
