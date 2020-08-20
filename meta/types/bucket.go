@@ -265,7 +265,7 @@ func translateOldLcToNewLc(newLc *lifecycle.Lifecycle, oldLc *lifecycle.Lc) erro
 	for i, oldRule := range oldLc.Rule {
 		newLc.Rules[i].ID = oldRule.ID
 		newLc.Rules[i].Status = lifecycle.Status(oldRule.Status)
-		newLc.Rules[i].SetFilterPrefix(&oldRule.Prefix)
+		newLc.Rules[i].Prefix = oldRule.Prefix
 		days, err := strconv.Atoi(oldRule.Expiration)
 		if err != nil {
 			helper.Logger.Error(nil, err)

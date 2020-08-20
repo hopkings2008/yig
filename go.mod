@@ -33,7 +33,7 @@ require (
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/cannium/gohbase v0.0.0-20170302080057-636e2cfdbc29
 	github.com/cep21/circuit v0.0.0-20181030180945-e893c027dc21
-	github.com/confluentinc/confluent-kafka-go v1.0.0 //indirect
+	github.com/confluentinc/confluent-kafka-go v1.0.0 //ct
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-redis/redis v6.15.2+incompatible
