@@ -14,7 +14,7 @@ const (
 	CLUSTER_CACHE_PREFIX = "cluster:"
 )
 
-func (m *Meta) GetCluster(ctx context.Context, fsid string, pool string) (cluster Cluster, err error) {
+func (m *Meta) GetCluster(ctx context.Context, fsid string, pool string) (cluster *Cluster, err error) {
 	rowKey := fsid + ObjectNameEnding + pool
 	getCluster := func() (c helper.Serializable, err error) {
 		helper.Logger.Info(ctx, "GetCluster CacheMiss. fsid:", fsid)
@@ -33,7 +33,7 @@ func (m *Meta) GetCluster(ctx context.Context, fsid string, pool string) (cluste
 		helper.Logger.Error(ctx, fmt.Sprintf("failed to get cluster for fsid: %s, err: %v", fsid, err))
 		return
 	}
-	cluster, ok := c.(Cluster)
+	cluster, ok := c.(*Cluster)
 	if !ok {
 		err = ErrInternalError
 		return
