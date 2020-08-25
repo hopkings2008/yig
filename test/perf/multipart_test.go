@@ -33,7 +33,7 @@ func (p ByPartNum) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 func (ps *PerfSuite) TestMultipartLimitation(c *C) {
 	bn := "multiparttests"
 	key := "objt1"
-	endpoint := "http://s3.test.com"
+	endpoint := "http://s3.test.com:8080"
 	ak := "hehehehe"
 	sk := "hehehehe"
 	region := "cn-bj-1"
