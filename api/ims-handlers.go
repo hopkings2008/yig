@@ -30,7 +30,7 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 	// handler process logic:
 	// 1. check the auth & get object meta info
 	// 2. try to get the plugin according to module, if no plugin found just return error to client.
-	// 3. first check the image process module.
+	// 3. get the moudle/actions from get url or post body or styleName.
 	// 4. check if the plugin support the imgModule.
 	// 5. do process logic by calling plugin's interface
 	// 6. return the image process result to the client.
@@ -59,7 +59,7 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// 3. first check the image process module.
+	// 3. get the moudle/actions from get url or post body or styleName.
 	var processStr string
 	switch strings.ToUpper(r.Method) {
 	case "GET":
@@ -157,7 +157,7 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 		WriteErrorResponse(w, r, errs.ErrNotImplemented)
 		return
 	}
-	// 5. do process logic by calling plugin's interface
+	// 5. do process logic by calling plugin's interface.
 	imgCephStoreInfoStr, err := ims.EncodeCephStoreInfo(obj)
 	if err != nil {
 		helper.Logger.Error(ctx, fmt.Sprintf("failed to encode ceph store for obj: %s/%s, err: %v",
