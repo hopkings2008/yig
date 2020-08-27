@@ -17,6 +17,7 @@ import (
 
 const (
 	MODULE_IMAGE = "image"
+	MOUDLE_STYLE = "style"
 )
 
 //The variable MUST be named as Exported.
@@ -33,7 +34,7 @@ type ImgProcessPlugin struct {
 }
 
 func (ipp *ImgProcessPlugin) Supports(module string) bool {
-	if module == MODULE_IMAGE {
+	if module == MODULE_IMAGE || module == MOUDLE_STYLE {
 		return true
 	}
 	return false
@@ -131,6 +132,17 @@ func (ipp *ImgProcessPlugin) DeleteImageStyles(ctx context.Context, imsReq *ims.
 func (ipp *ImgProcessPlugin) GetImageMetrics(ctx context.Context, imsReq *ims.GetImsReq) (*ims.ImsResp, error) {
 	helper.Logger.Info(ctx, fmt.Sprintf("begin to del req %v", *imsReq))
 	newServer := ipp.Server + "/ims/v1/metrics"
+	reqStr, err := json.Marshal(imsReq)
+	if err != nil {
+		helper.Logger.Error(ctx, fmt.Sprintf("failed to encoding req %v, err: %v", *imsReq, err))
+		return nil, err
+	}
+	return sendHttpToIms(ctx, newServer, ipp.client, reqStr)
+}
+
+func (ipp *ImgProcessPlugin) GetImageStyle(ctx context.Context, imsReq *ims.GetStyleReq) (*ims.ImsResp, error) {
+	helper.Logger.Info(ctx, fmt.Sprintf("begin to del req %v", *imsReq))
+	newServer := ipp.Server + "/ims/v1/styles/get"
 	reqStr, err := json.Marshal(imsReq)
 	if err != nil {
 		helper.Logger.Error(ctx, fmt.Sprintf("failed to encoding req %v, err: %v", *imsReq, err))

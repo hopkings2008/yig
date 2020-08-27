@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+        "encoding/json"
 
 	"github.com/gorilla/mux"
 	"github.com/journeymidnight/yig/api/datatype/policy"
@@ -28,18 +29,18 @@ const (
 func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.Request) {
 	// handler process logic:
 	// 1. check the auth & get object meta info
-	// 2. first check the image process module
-	// 3. try to get the plugin according to module, if no plugin found just return error to client.
-	// 4. do process logic by calling plugin's interface
-	// 5. return the image process result to the client.
-
+	// 2. try to get the plugin according to module, if no plugin found just return error to client.
+	// 3. get the moudle/actions from get url or post body or styleName.
+	// 4. check if the plugin support the imgModule.
+	// 5. do process logic by calling plugin's interface
+	// 6. return the image process result to the client.
 	ctx := r.Context()
 	var objectName, bucketName string
 	vars := mux.Vars(r)
 	bucketName = vars["bucket"]
 	objectName = vars["object"]
 
-        r = generateIamCtxRequest(r)
+	r = generateIamCtxRequest(r)
 
 	// 1. check the auth & get object meta info.
 	obj, err := api.getObjectInfoFromReq(ctx, bucketName, objectName, r)
@@ -49,11 +50,20 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 		WriteErrorResponse(w, r, err)
 		return
 	}
-	// 2. first check the image process module
+
+	// 2. try to get the plugin according to module, if no plugin found just return error to client.
+	imgProcessPlugin := ims.GetImgProcessPlugin()
+	if imgProcessPlugin == nil {
+		helper.Logger.Error(ctx, "image process is unsupported")
+		WriteErrorResponse(w, r, errs.ErrNotImplemented)
+		return
+	}
+
+	// 3. get the moudle/actions from get url or post body or styleName.
 	var processStr string
 	switch strings.ToUpper(r.Method) {
 	case "GET":
-		// url: x-oss-process=image/circle,r_100
+		// url: x-oss-process=image/circle,r_100 or x-oss-process=style/styleName
 		querys := r.URL.Query()
 		values := querys[IMS_PROCESS_KEY]
 		if len(values) == 0 {
@@ -62,8 +72,46 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 			WriteErrorResponse(w, r, errs.ErrMissingFields)
 			return
 		}
-		// image/circle,r_100
 		processStr = values[0]
+		elems := strings.Split(processStr, "/")
+		num := len(elems)
+		if num < 2 {
+			helper.Logger.Error(ctx, fmt.Sprintf("no enough keys(%s) for query style", processStr))
+		}
+		if elems[0] == "style" {
+			// 1. get styleName and check it.
+			styleName := elems[1]
+			if !isValidStyleName(styleName) {
+				WriteErrorResponse(w, r, errs.ErrInvalidStyleName)
+				return
+			}
+			// 2. get style from ims
+			GetStyleReq := &ims.GetStyleReq{
+				Bucketname: bucketName,
+				Stylename: styleName,
+			}
+			styleResp, err := imgProcessPlugin.GetImageStyle(ctx, GetStyleReq)
+			if err != nil {
+				helper.Logger.Error(ctx, fmt.Sprintf("failed to get image style, bucket: %s, style: %s, err: %v", bucketName, styleName, err))
+				WriteErrorResponse(w, r, err)
+				return
+			}
+			defer styleResp.Reader.Close()
+			style, err := ioutil.ReadAll(styleResp.Reader)
+			if err != nil {
+				helper.Logger.Error(ctx, fmt.Sprintf("failed to read body from styleResp, err: %v", err))
+				WriteErrorResponse(w, r, err)
+				return
+			}
+			var getStyleResp ims.GetStyleResp
+			err = json.Unmarshal([]byte(style), &getStyleResp)
+			if err != nil {
+				helper.Logger.Error(ctx, fmt.Sprintf("failed to convert getStyleResp from json, err: %v", getStyleResp, err))
+				WriteErrorResponse(w, r, err)
+				return
+			}
+			processStr = getStyleResp.Style //image/circle,r_100
+		}
 	case "POST":
 		// body: x-oss-process=image/circle,r_100
 		// 0 <= content-length <= 2MB
@@ -103,19 +151,13 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 		WriteErrorResponse(w, r, err)
 		return
 	}
-	// 3. try to get the plugin according to module, if no plugin found just return error to client.
-	imgProcessPlugin := ims.GetImgProcessPlugin()
-	if imgProcessPlugin == nil {
-		helper.Logger.Error(ctx, "image process is unsupported")
-		WriteErrorResponse(w, r, errs.ErrNotImplemented)
-		return
-	}
+	// 4. check if the plugin support the imgModule.
 	if !imgProcessPlugin.Supports(imgModule) {
 		helper.Logger.Error(ctx, fmt.Sprintf("image module %s for url %s is unsupported", imgModule, r.URL.String()))
 		WriteErrorResponse(w, r, errs.ErrNotImplemented)
 		return
 	}
-	// 4. do process logic by calling plugin's interface
+	// 5. do process logic by calling plugin's interface.
 	imgCephStoreInfoStr, err := ims.EncodeCephStoreInfo(obj)
 	if err != nil {
 		helper.Logger.Error(ctx, fmt.Sprintf("failed to encode ceph store for obj: %s/%s, err: %v",
@@ -152,7 +194,7 @@ func (api ObjectAPIHandlers) ImageServiceHandler(w http.ResponseWriter, r *http.
 		// set default to png
 		imsReq.Type = ".png"
 	}
-
+	// 6. return the image process result to the client.
 	imsResp, err := imgProcessPlugin.Do(ctx, imsReq)
 	if err != nil {
 		helper.Logger.Error(ctx, fmt.Sprintf("failed to perform image process for url: %s, err: %v",

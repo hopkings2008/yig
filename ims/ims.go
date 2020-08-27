@@ -88,6 +88,15 @@ type DeleteStylesReq struct {
         Names []string `json:"names"`
 }
 
+type GetStyleReq struct {
+	Bucketname string `json:"bucketname"`
+	Stylename string `json:"stylename"`
+}
+
+type GetStyleResp struct {
+	Style string `json:"style"`
+}
+
 /*
 * ImgProcessClient: handles the image process logic
 *
@@ -116,9 +125,13 @@ type ImgProcessPlugin interface {
          */
         ListImageStyles(ctx context.Context, imsReq *GetImsReq) (*ImsResp, error)
         /*
-        *Delete: list image styles.
+        *DeleteImageStyles: delete image styles.
          */
         DeleteImageStyles(ctx context.Context, imsReq *DeleteStylesReq) (*ImsResp, error)
+	/*
+	*GetImageStyle: get image style.
+	*/
+	GetImageStyle(ctx context.Context, imsReq *GetStyleReq) (*ImsResp, error)
 }
 
 var imgProcessPlugin ImgProcessPlugin
