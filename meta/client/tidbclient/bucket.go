@@ -19,7 +19,7 @@ func (t *TidbClient) GetBucket(bucketName string) (bucket *Bucket, err error) {
 	var updateTime sql.NullString
 	var website sql.NullString
 
-	sqltext := "select bucketname,acl,cors,COALESCE(logging,\"\"),lc,uid,policy,createtime,usages,versioning,update_time,website from buckets where bucketname=?;"
+	sqltext := "select bucketname,acl,cors,COALESCE(logging,\"\"),lc,uid,policy,createtime,usages,fileNum,versioning,update_time,website from buckets where bucketname=?;"
 	tmp := &Bucket{}
 	err = t.Client.QueryRow(sqltext, bucketName).Scan(
 		&tmp.Name,
@@ -31,6 +31,7 @@ func (t *TidbClient) GetBucket(bucketName string) (bucket *Bucket, err error) {
 		&policy,
 		&createTime,
 		&tmp.Usage,
+		&tmp.FileNum,
 		&tmp.Versioning,
 		&updateTime,
 		&website,
