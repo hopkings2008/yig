@@ -87,7 +87,7 @@ func (t *TidbClient) GetBucket(bucketName string) (bucket *Bucket, err error) {
 }
 
 func (t *TidbClient) GetBuckets() (buckets []*Bucket, err error) {
-	sqltext := "select bucketname,acl,cors,COALESCE(logging,\"\"),lc,uid,policy,createtime,usages,versioning,update_time,website from buckets;"
+	sqltext := "select bucketname,acl,cors,COALESCE(logging,\"\"),lc,uid,policy,createtime,usages,fileNum,versioning,update_time,website from buckets;"
 	rows, err := t.Client.Query(sqltext)
 	if err == sql.ErrNoRows {
 		err = nil
@@ -113,6 +113,7 @@ func (t *TidbClient) GetBuckets() (buckets []*Bucket, err error) {
 			&policy,
 			&createTime,
 			&tmp.Usage,
+			&tmp.FileNum,
 			&tmp.Versioning,
 			&updateTime,
 			&website)
