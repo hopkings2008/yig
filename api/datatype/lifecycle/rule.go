@@ -42,7 +42,7 @@ type Rule struct {
 	NoncurrentVersionExpiration    *NoncurrentVersionExpiration    `xml:"NoncurrentVersionExpiration,omitempty" json:"NoncurrentVersionExpiration,omitempty"`
 	NoncurrentVersionTransitions   []NoncurrentVersionTransition   `xml:"NoncurrentVersionTransition,omitempty" json:"NoncurrentVersionTransition,omitempty"`
 	AbortIncompleteMultipartUpload *AbortIncompleteMultipartUpload `xml:"AbortIncompleteMultipartUpload,omitempty" json:"AbortIncompleteMultipartUpload,omitempty"`
-	Prefix                         *string                         `xml:"Prefix,omitempty" json:"Prefix,omitempty"`
+	Prefix                         string                          `xml:"Prefix,omitempty" json:"Prefix,omitempty"`
 }
 
 // validateID - checks if ID is valid or not.
@@ -117,10 +117,7 @@ func (r Rule) validateFilter() error {
 	if r.Filter != nil {
 		return r.Filter.Validate()
 	}
-	if r.Prefix != nil || (r.Prefix != nil && *r.Prefix != "") {
-		// New configuration using Prefix is not allowed. User Filter>Prefix instead.
-		return ErrLcPrefixDeprecated
-	}
+
 	return nil
 }
 
@@ -140,10 +137,7 @@ func (r Rule) GetPrefix() string {
 	}
 
 	// If Filter>Prefix is empty, use r.Prefix. Just for compatibility of old configured LC rules.
-	if r.Prefix != nil {
-		return *r.Prefix
-	}
-	return ""
+	return r.Prefix
 }
 
 // Return whether rule tags are contained by object tags;
@@ -191,6 +185,9 @@ func (r Rule) Validate() error {
 	}
 	if err := r.validateFilter(); err != nil {
 		return err
+	}
+	if r.Filter != nil && r.Filter.Prefix != nil && r.Prefix != "" && *(r.Filter.Prefix) != "" {
+		return ErrLcPrefixDuplicatedFilterPrefix
 	}
 
 	return nil

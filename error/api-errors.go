@@ -162,11 +162,13 @@ const (
 	ErrInvalidLcStorageClass
 	ErrLcMissingDaysAfterInitiation
 	ErrInvalidLcRuleID
+	ErrInvalidLcRuleIDDuplicated
 	ErrInvalidLcRuleStatus
 	ErrLcMissingAction
 	ErrNoSuchBucketLc
 	ErrInvalidStorageClass
 	ErrLcPrefixDeprecated
+	ErrLcPrefixDuplicatedFilterPrefix
 
 	// Add new glacier error codes here.
 	ErrResourceNotFound
@@ -218,9 +220,9 @@ const (
 	ErrIAMResponseBodyParseFailed
 	ErrIAMUnknown
 
-        // Style error
-        ErrInvalidStyleName
-        ErrInvalidStyle
+	// Style error
+	ErrInvalidStyleName
+	ErrInvalidStyle
 )
 
 // error code to APIError structure, these fields carry respective
@@ -787,6 +789,11 @@ var ErrorCodeResponse = map[ApiErrorCode]ApiErrorStruct{
 		Description:    "The Lifecycle configuration ID must be less than 255 characters.",
 		HttpStatusCode: http.StatusBadRequest,
 	},
+	ErrInvalidLcRuleIDDuplicated: {
+		AwsErrorCode:   "IllegalLcConfigurationException",
+		Description:    "Rule ID must be unique. Found same ID for more than one rule.",
+		HttpStatusCode: http.StatusBadRequest,
+	},
 	ErrInvalidLcRuleStatus: {
 		AwsErrorCode:   "IllegalLcConfigurationException",
 		Description:    "The Lifecycle configuration Status must be set to either Enabled or Disabled.",
@@ -800,6 +807,11 @@ var ErrorCodeResponse = map[ApiErrorCode]ApiErrorStruct{
 	ErrLcPrefixDeprecated: {
 		AwsErrorCode:   "IllegalLcConfigurationException",
 		Description:    "The Lifecycle configuration Prefix is no longer used. Use Filter instead.",
+		HttpStatusCode: http.StatusBadRequest,
+	},
+	ErrLcPrefixDuplicatedFilterPrefix: {
+		AwsErrorCode:   "IllegalLcConfigurationException",
+		Description:    "Both the Prefix and Filter Prefix is set.",
 		HttpStatusCode: http.StatusBadRequest,
 	},
 	ErrInvalidPosition: {
@@ -1047,16 +1059,16 @@ var ErrorCodeResponse = map[ApiErrorCode]ApiErrorStruct{
 		Description:    "IAM has an unknown error",
 		HttpStatusCode: http.StatusForbidden,
 	},
-        ErrInvalidStyleName: {
-                AwsErrorCode:   "InvalidStyleName",
-                Description:    "The specified style name is not valid.",
-                HttpStatusCode: http.StatusBadRequest,
-        },
-        ErrInvalidStyle: {
-                AwsErrorCode:   "InvalidStyle",
-                Description:    "The specified style is not valid.",
-                HttpStatusCode: http.StatusBadRequest,
-        },
+	ErrInvalidStyleName: {
+		AwsErrorCode:   "InvalidStyleName",
+		Description:    "The specified style name is not valid.",
+		HttpStatusCode: http.StatusBadRequest,
+	},
+	ErrInvalidStyle: {
+		AwsErrorCode:   "InvalidStyle",
+		Description:    "The specified style is not valid.",
+		HttpStatusCode: http.StatusBadRequest,
+	},
 }
 
 func (e ApiErrorCode) AwsErrorCode() string {

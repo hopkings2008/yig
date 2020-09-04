@@ -54,6 +54,7 @@ install -D -m 644 conf/yig.toml %{buildroot}%{_sysconfdir}/yig/yig.toml
 install -D -m 644 conf/actions.json %{buildroot}%{_sysconfdir}/yig/actions.json
 install -D -m 644 integrate/yig.sql  %{buildroot}/usr/local/yig/yig.sql
 install -d %{buildroot}/var/log/yig/
+install -D -m 644 plugins/img_process_plugin.so  %{buildroot}/usr/lib64/img_process_plugin.so
 
 #ceph confs ?
 
@@ -92,6 +93,7 @@ rm -rf %{buildroot}
 /usr/lib/systemd/system/yig_lc.service
 /usr/lib/systemd/system/yig_bl.service
 /usr/local/yig/yig.sql
+/usr/lib64/img_process_plugin.so
 
 
 %changelog

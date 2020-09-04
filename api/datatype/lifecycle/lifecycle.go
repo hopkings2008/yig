@@ -92,9 +92,15 @@ func (lc Lifecycle) Validate() error {
 		return ErrInvalidLcRulesNumbers
 	}
 	// Validate all the rules in the lifecycle config
+	IDMap := make(map[string]bool)
 	for _, r := range lc.Rules {
 		if err := r.Validate(); err != nil {
 			return err
+		}
+		if _, ok := IDMap[r.ID]; ok {
+			return ErrInvalidLcRuleIDDuplicated
+		} else {
+			IDMap[r.ID] = true
 		}
 	}
 	return nil
